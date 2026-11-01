@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "PersonalToolsWithAI",
+  "version": "0.1.0",
+  "permissions": ["activeTab", "scripting", "tabs", "clipboardRead"],
+  "action": { "default_popup": "popup/popup.html", "default_title": "PersonalToolsWithAI" },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["features/text-expander/snippets.js", "features/text-expander/expander.js"]
+  }]
+}

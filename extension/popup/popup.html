@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>PersonalToolsWithAI</title>
+  <style>
+    body { width: 360px; margin: 12px; font: 13px system-ui, sans-serif; }
+    h2 { font-size: 13px; margin: 16px 0 6px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { padding: 4px 0; border-bottom: 1px solid #eee; }
+    .url { color: #666; font-size: 11px; }
+    .title, .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <button id="grayscale" type="button">흑백 전환</button>
+  <p id="status" role="status"></p>
+
+  <h2>열린 탭</h2>
+  <ul id="tabs"></ul>
+</body>
+</html>
