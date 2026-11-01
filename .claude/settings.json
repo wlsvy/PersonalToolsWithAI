@@ -2,16 +2,80 @@
   "permissions": {
     "allow": [
       "Bash(dotnet:*)",
-      "Bash(npm:*)",
-      "Bash(node:*)",
       "Bash(cp:*)",
-      "Bash(rm:*)",
       "Bash(mkdir:*)",
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(zip:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+
+      "Bash(rm -rf dist)",
+      "Bash(rm -rf publish)",
+      "Bash(rm -rf releases)",
+      "Bash(rm -rf src/BlazorExtension/bin)",
+      "Bash(rm -rf src/BlazorExtension/obj)",
+
+      "Bash(npm install)",
+      "Bash(npm ci)",
+      "Bash(npm test)",
+      "Bash(npm run:*)",
+      "Bash(npm ls:*)",
+      "Bash(node --version)",
+
+      "Edit(./**)",
+
+      "Bash(./scripts/build.sh)",
+      "Bash(./scripts/pack.sh)",
+
+      "Bash(pwd)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(tree:*)",
+      "Bash(du:*)",
+      "Bash(diff:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(jq:*)",
+      "Bash(which:*)",
+      "Bash(unzip -l:*)",
+
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch --list:*)",
+      "Bash(git remote -v)",
+      "Bash(git ls-files:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git blame:*)",
+
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+
+      "Bash(dotnet --info)",
+      "Bash(dotnet --list-sdks)"
     ],
-    "deny": []
+    "ask": [
+      "Bash(npm publish:*)",
+      "Bash(git push:*)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.gitignore)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./**/.env*)",
+      "Read(./secrets/**)",
+      "Edit(./.env)",
+      "Edit(./**/.env*)"
+    ]
   }
 }
