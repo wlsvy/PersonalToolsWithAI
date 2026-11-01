@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>PersonalToolsWithAI</title>
+  <link rel="stylesheet" href="../shared/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      width: 360px; margin: 0; padding: 14px;
+      font: 13px/1.4 system-ui, -apple-system, sans-serif;
+      color: var(--text); background: var(--bg);
+    }
+    header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    header .logo {
+      width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-weight: 700; font-size: 12px;
+    }
+    header h1 { font-size: 14px; margin: 0; font-weight: 600; }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .actions button {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer;
+      box-shadow: 0 1px 2px rgb(0 0 0 / .04);
+      transition: border-color .15s, box-shadow .15s, transform .05s;
+    }
+    .actions button:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgb(79 70 229 / .12); }
+    .actions button:active { transform: translateY(1px); }
+    .actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .actions svg {
+      width: 28px; height: 28px; padding: 6px; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent);
+    }
+    .actions span { font-weight: 500; }
+
+    #status {
+      margin: 10px 0 0; padding: 8px 10px; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent); font-size: 12px;
+    }
+    #status:empty { display: none; }
+
+    h2 {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--muted); margin: 16px 2px 6px;
+    }
+    ul {
+      list-style: none; margin: 0; padding: 4px; max-height: 280px; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    }
+    li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; }
+    li .text { flex: 1; min-width: 0; }
+    li button {
+      flex: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--surface); color: var(--accent); font: inherit; font-size: 11px; cursor: pointer;
+    }
+    li button:hover:not(:disabled) { border-color: var(--accent); }
+    li button:disabled { color: var(--muted); opacity: .5; cursor: default; }
+    li button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    li + li { border-top: 1px solid #f1f2f4; }
+    li:hover { background: var(--bg); }
+    .title { font-weight: 500; }
+    .url { color: var(--muted); font-size: 11px; }
+    .title, .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="true">P</div>
+    <h1>PersonalToolsWithAI</h1>
+  </header>
+
+  <div class="actions">
+    <button id="grayscale" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+      <span>흑백 전환</span>
+    </button>
+    <button id="clip" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 13h6M9 17h4"/></svg>
+      <span>본문 Markdown 복사</span>
+    </button>
+  </div>
+  <p id="status" role="status"></p>
+
+  <h2>열린 탭</h2>
+  <ul id="tabs"></ul>
+</body>
+</html>

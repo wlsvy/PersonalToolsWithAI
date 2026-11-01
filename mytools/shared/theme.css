@@ -1,0 +1,10 @@
+/* 확장 내 모든 UI 페이지(popup, 이후 options 등)가 공유하는 디자인 토큰 */
+:root {
+  --bg: #f7f8fa;
+  --surface: #fff;
+  --border: #e6e8ec;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+}
