@@ -29,6 +29,11 @@ async function render(el, md) {
 }
 const $ = (id) => document.getElementById(id);
 const status = $('status');
+// busy면 스피너를 붙인다 (요약·번역 대기 중)
+function setStatus(text, busy = false) {
+  status.textContent = text;
+  status.classList.toggle('busy', busy);
+}
 const key = new URLSearchParams(location.search).get('id');
 const { [key]: doc } = await chrome.storage.session.get(key);
 
@@ -44,7 +49,7 @@ async function ask(msg) {
 
 if (!doc) {
   // 브라우저를 재시작하면 storage.session이 비워진다
-  status.textContent = '데이터가 없습니다. 원래 페이지에서 다시 실행하세요.';
+  setStatus('데이터가 없습니다. 원래 페이지에서 다시 실행하세요.');
 } else {
   // 페이지 제목/본문은 외부 데이터라 textContent로만 넣는다
   document.title = `요약 · ${doc.title}`;
@@ -55,17 +60,17 @@ if (!doc) {
 
   // 새로고침마다 다시 요약하지 않도록 결과를 같은 키에 붙여 둔다
   if (!doc.summary) {
-    status.textContent = '요약 중… (sonnet)';
+    setStatus('요약 중… (sonnet)', true);
     const r = await ask({ action: 'summary', markdown: doc.markdown });
     if (r.ok) {
       doc.summary = r.text;
       await chrome.storage.session.set({ [key]: doc });
     } else {
-      status.textContent = `요약 실패: ${r.error}`;
+      setStatus(`요약 실패: ${r.error}`);
     }
   }
   if (doc.summary) {
-    status.textContent = '';
+    setStatus('');
     await render($('summary'), summaryMd());
     $('copy').disabled = false;
   }
@@ -83,9 +88,18 @@ async function showTranslation() {
   $('copy-translation').disabled = false;
 }
 
+// 상태 줄과 따로 띄운다 — 번역 중 복사해도 진행 표시가 지워지지 않게
+let toastTimer;
 async function copy(text) {
-  await navigator.clipboard.writeText(text);
-  status.textContent = `복사했습니다 (${text.length}자).`;
+  try {
+    await navigator.clipboard.writeText(text);
+    $('toast').textContent = `복사했습니다 (${text.length}자)`;
+  } catch (e) {
+    $('toast').textContent = `복사 실패: ${e.message}`;
+  }
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2000);
 }
 
 $('copy').addEventListener('click', () => copy(summaryMd()));
@@ -93,14 +107,14 @@ $('copy-translation').addEventListener('click', () => copy(doc.translation));
 
 $('translate').addEventListener('click', async () => {
   $('translate').disabled = true;
-  status.textContent = '번역 중… (sonnet, 긴 글은 몇 분 걸립니다)';
+  setStatus('번역 중… (sonnet, 긴 글은 몇 분 걸립니다)', true);
   const r = await ask({ action: 'translate', markdown: doc.markdown });
   if (!r.ok) {
-    status.textContent = `번역 실패: ${r.error}`;
+    setStatus(`번역 실패: ${r.error}`);
     $('translate').disabled = false;
     return;
   }
-  status.textContent = '';
+  setStatus('');
   // 요약과 같이 새로고침해도 다시 번역하지 않게 붙여 둔다
   doc.translation = r.text;
   await chrome.storage.session.set({ [key]: doc });
