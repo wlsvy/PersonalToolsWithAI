@@ -6,11 +6,11 @@
 
 | 파일 | 역할 |
 |---|---|
-| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `countWords(text)`, `stripLinkTitles(md)` |
-| `mytools/features/summarize/summarize.test.mjs` | 위 두 순수 함수 테스트 (`node`로 실행) |
+| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `countWords(text)`, `stripLinkTitles(md)`, `sourceLink(title, url)` |
+| `mytools/features/summarize/summarize.test.mjs` | 위 순수 함수 테스트 (`node`로 실행) |
 | `mytools/background.js` | `MENUS.summary` 우클릭 메뉴 → `openSummary(tab)` |
-| `mytools/popup/popup.js` | 탭 목록의 [요약] 버튼 → `openSummary(tab)` ([tab-list.ai.md](tab-list.ai.md)) |
-| `mytools/result/result.{html,js}` | 결과 탭: 요약 요청·표시, [요약 Markdown 복사], [마저 번역] |
+| `mytools/popup/popup.js` | 탭 목록의 [요약] 버튼 → `openSummary(tab, { active: false })` (뒤에서 열기, popup 유지) ([tab-list.ai.md](tab-list.ai.md)) |
+| `mytools/result/result.{html,js}` | 결과 탭: 요약 요청·표시, [요약 Markdown 복사], [마저 번역], [번역 Markdown 복사] |
 | `mytools/result/vendor/marked.esm.js` | marked 18.1.1 (ESM) |
 | `mytools/result/vendor/mermaid.min.js` | mermaid 12.2.0 (UMD, `globalThis.mermaid`, 5.5MB) |
 | `native-host/clip_host.mjs` | Native Messaging 호스트: `claude -p` 호출 |
@@ -29,11 +29,12 @@
   storage.session[id] 읽기 (없으면 안내)
   doc.summary 없으면 → sendNativeMessage({ action: 'summary', markdown })
                       → 성공 시 doc.summary 저장 (새로고침해도 재요약 안 함)
-  render(#summary, doc.summary)
-  [요약 Markdown 복사] → navigator.clipboard.writeText(doc.summary)
+  render(#summary, sourceLink(title, url) + doc.summary)   (링크는 저장하지 않고 표시·복사 때 붙임)
+  [요약 Markdown 복사] → navigator.clipboard.writeText(링크 + doc.summary)
   [마저 번역] → sendNativeMessage({ action: 'translate', markdown }) → doc.translation 저장 → render(#translation)
+  [번역 Markdown 복사] → navigator.clipboard.writeText(doc.translation)   (번역이 있을 때만 보임)
 [clip_host.mjs]
-  summary: ask('haiku', 'summary.md', markdown) → { ok, text }
+  summary: ask('sonnet', 'summary.md', markdown) → { ok, text }
   translate: ask('sonnet', 'translate.md', markdown) → { ok, text }
   실패:    { ok: false, error }
 ```

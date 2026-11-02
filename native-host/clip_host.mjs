@@ -49,7 +49,7 @@ function ask(model, prompt, text) {
 }
 
 function handle(msg) {
-  if (msg.action === 'summary') return { ok: true, text: ask('haiku', 'summary.md', msg.markdown) };
+  if (msg.action === 'summary') return { ok: true, text: ask('sonnet', 'summary.md', msg.markdown) };
   if (msg.action === 'translate') return { ok: true, text: ask('sonnet', 'translate.md', msg.markdown) };
   return { ok: false, error: `unknown action: ${JSON.stringify(msg.action)}` };
 }

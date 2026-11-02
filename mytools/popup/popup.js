@@ -55,7 +55,9 @@ for (const tab of await listTabs()) {
   btn.addEventListener('click', async () => {
     status.textContent = '본문 추출 중…';
     try {
-      await openSummary(tab); // 새 탭이 열리면서 popup은 닫힌다
+      // 뒤에서 열어 popup이 닫히지 않으니 여러 탭을 연달아 요약할 수 있다
+      await openSummary(tab, { active: false });
+      status.textContent = `새 탭에서 요약 중: ${tab.title}`;
     } catch (e) {
       // 메모리 절약으로 언로드된 탭도 주입이 실패한다
       status.textContent = e.message === '본문을 찾지 못했습니다.' ? e.message : '이 탭에서는 사용할 수 없습니다. 탭을 한 번 열어 로드한 뒤 다시 시도하세요.';

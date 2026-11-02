@@ -1,5 +1,6 @@
 // openSummary()가 storage.session에 둔 { title, url, markdown, words }만 쓴다. 원래 탭에는 접근하지 않는다.
 import { marked } from './vendor/marked.esm.js';
+import { sourceLink } from '../features/summarize/summarize.js';
 
 const HOST = 'com.personaltools.clip';
 
@@ -54,7 +55,7 @@ if (!doc) {
 
   // 새로고침마다 다시 요약하지 않도록 결과를 같은 키에 붙여 둔다
   if (!doc.summary) {
-    status.textContent = '요약 중… (haiku)';
+    status.textContent = '요약 중… (sonnet)';
     const r = await ask({ action: 'summary', markdown: doc.markdown });
     if (r.ok) {
       doc.summary = r.text;
@@ -65,17 +66,30 @@ if (!doc) {
   }
   if (doc.summary) {
     status.textContent = '';
-    await render($('summary'), doc.summary);
+    await render($('summary'), summaryMd());
     $('copy').disabled = false;
   }
-  if (doc.translation) await render($('translation'), doc.translation);
+  if (doc.translation) await showTranslation();
   else $('translate').disabled = false;
 }
 
-$('copy').addEventListener('click', async () => {
-  await navigator.clipboard.writeText(doc.summary);
-  status.textContent = `복사했습니다 (${doc.summary.length}자).`;
-});
+// 링크는 저장하지 않고 표시·복사 때 붙인다 — 이미 저장된 요약에도 붙도록
+function summaryMd() {
+  return `${sourceLink(doc.title, doc.url)}\n\n${doc.summary}`;
+}
+
+async function showTranslation() {
+  await render($('translation'), doc.translation);
+  $('copy-translation').disabled = false;
+}
+
+async function copy(text) {
+  await navigator.clipboard.writeText(text);
+  status.textContent = `복사했습니다 (${text.length}자).`;
+}
+
+$('copy').addEventListener('click', () => copy(summaryMd()));
+$('copy-translation').addEventListener('click', () => copy(doc.translation));
 
 $('translate').addEventListener('click', async () => {
   $('translate').disabled = true;
@@ -90,5 +104,5 @@ $('translate').addEventListener('click', async () => {
   // 요약과 같이 새로고침해도 다시 번역하지 않게 붙여 둔다
   doc.translation = r.text;
   await chrome.storage.session.set({ [key]: doc });
-  await render($('translation'), r.text);
+  await showTranslation();
 });
