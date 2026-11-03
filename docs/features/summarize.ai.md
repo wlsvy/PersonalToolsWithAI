@@ -6,7 +6,7 @@
 
 | 파일 | 역할 |
 |---|---|
-| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `countWords(text)`, `stripLinkTitles(md)`, `sourceLink(title, url)` |
+| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `countWords(text)`, `stripLinkTitles(md)`, `stripCitations(md)`, `sourceLink(title, url)` |
 | `mytools/features/summarize/summarize.test.mjs` | 위 순수 함수 테스트 (`node`로 실행) |
 | `mytools/background.js` | `MENUS.summary` 우클릭 메뉴 → `openSummary(tab)` |
 | `mytools/popup/popup.js` | 탭 목록의 [요약] 버튼 → `openSummary(tab, { active: false })` (뒤에서 열기, popup 유지) ([tab-list.ai.md](tab-list.ai.md)) |
@@ -22,7 +22,7 @@
 ```
 [우클릭 / popup [요약]]
   openSummary(tab)                         (background 또는 popup 컨텍스트)
-    clipMarkdown(tab.id) → stripLinkTitles → countWords
+    clipMarkdown(tab.id) → stripLinkTitles → stripCitations → countWords
     storage.session[uuid] = { title, url, markdown, words }
     tabs.create(result/result.html?id=uuid)
 [result.js]
@@ -48,6 +48,7 @@
 - `sendNativeMessage`(일회성)를 쓴다. 호스트는 메시지마다 실행되고 응답 후 종료. 실패(호스트 미등록 등)는 `ask()`가 `{ ok: false, error }`로 바꾸고, `not found`면 install.sh 안내를 붙인다.
 - popup [요약]은 활성 탭이 아닌 탭에 주입 → `host_permissions: <all_urls>` 필요.
 - `stripLinkTitles`: turndown이 URL의 괄호와 title의 따옴표를 `\`로 이스케이프하는 것을 고려한 정규식. `[1](url "저자…")` → `[1](url)`.
+- `stripCitations`: 텍스트가 숫자(또는 `\[n\]`, `n–m`)뿐인 링크와 그 사이 쉼표·대시를 묶음째 삭제합니다. 요약·번역 입력과 "원문 Markdown" 표시 모두에서 빠집니다.
 - `countWords`: `split(/\s+/)` 기준. Markdown 문법·URL도 단어로 센다 (대략치).
 
 ## 렌더링 (`result.js`의 `render`)

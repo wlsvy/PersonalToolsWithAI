@@ -1,6 +1,13 @@
 // 실행: node features/summarize/summarize.test.mjs
 import assert from 'node:assert/strict';
-import { countWords, sourceLink, stripLinkTitles } from './summarize.js';
+import { countWords, sourceLink, stripCitations, stripLinkTitles } from './summarize.js';
+
+assert.equal(
+  stripCitations('oases[1](#ref-CR1),[2](https://x.org/a#ref-CR2), rare[6](#ref-CR6)–[8](#ref-CR8). Next'),
+  'oases, rare. Next',
+);
+assert.equal(stripCitations('fact[\\[3\\]](https://w.org/a#cite_note-3) x'), 'fact x');
+assert.equal(stripCitations('see [Fig. 2](https://x.org/f2)'), 'see [Fig. 2](https://x.org/f2)');
 
 assert.equal(
   stripLinkTitles('humans[1](https://x.org/a#ref-CR1 "Proops, L. (2012). \\"Horses\\".").'),
