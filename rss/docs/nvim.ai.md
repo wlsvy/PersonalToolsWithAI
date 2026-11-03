@@ -10,8 +10,10 @@ nvim/
   lua/rss/api.lua       curl via vim.system (async), vim.json.decode; one function per API v1 endpoint
   lua/rss/ui.lua        buffers: feeds, entries, entry; keymaps
   lua/rss/render.lua    html → text: pandoc if executable, else tag strip
+  tests/render_test.lua strip() self-check (no server needed)
 ```
 - api.lua is the only module that knows URLs/paths; base path `/api/v1` from config.
+- Token/body passed to curl via stdin (`--config -`), never argv.
 - External deps: `curl` required, `pandoc` optional.
 
 ## Commands
@@ -24,7 +26,8 @@ nvim/
 - Keymaps overridable via `setup{ keymaps = {...} }`.
 
 ## Render
-- `pandoc -f html -t gfm`; fallback strips tags (`shortcut:` comment: no tables/links, install pandoc to upgrade).
+- `pandoc -f html -t gfm-raw_html --wrap=none` (drops leftover tags); fallback strips tags (`shortcut:` comment: no tables/links, install pandoc to upgrade).
 
 ## Verify
-`nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -c "lua require('rss').setup{url='http://localhost:8080',token='dev'}" -c Rss -c q` without errors; manual walkthrough against local server.
+- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -l rss/nvim/tests/render_test.lua` → `ok`
+- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -c "lua require('rss').setup{url='http://localhost:8080',token='dev'}" -c Rss -c q` without errors; manual walkthrough against local server.
