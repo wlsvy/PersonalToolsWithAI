@@ -115,13 +115,15 @@ func TestPrivateAddressBlockedByDefault(t *testing.T) {
 	}
 }
 
-func TestIsPrivate(t *testing.T) {
+func TestIsPublic(t *testing.T) {
 	for addr, want := range map[string]bool{
-		"127.0.0.1": true, "10.1.2.3": true, "192.168.0.1": true, "169.254.169.254": true,
-		"100.100.1.1": true, "::1": true, "::ffff:127.0.0.1": true, "fe80::1": true,
-		"8.8.8.8": false, "2606:4700::1111": false,
+		"127.0.0.1": false, "10.1.2.3": false, "192.168.0.1": false, "169.254.169.254": false,
+		"100.100.1.1": false, "0.1.2.3": false, "198.18.0.1": false, "240.0.0.1": false, "255.255.255.255": false,
+		"::1": false, "::ffff:127.0.0.1": false, "fe80::1": false, "fc00::1": false, "::127.0.0.1": false,
+		"64:ff9b::7f00:1": false, "64:ff9b::a9fe:a9fe": false, "2002:7f00:1::": false, "2001::1": false,
+		"8.8.8.8": true, "2606:4700::1111": true, "64:ff9b::808:808": true, "2002:808:808::": true,
 	} {
-		if got := isPrivate(netip.MustParseAddr(addr)); got != want {
+		if got := isPublic(netip.MustParseAddr(addr)); got != want {
 			t.Errorf("%s: got %v want %v", addr, got, want)
 		}
 	}
