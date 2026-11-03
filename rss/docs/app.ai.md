@@ -18,11 +18,15 @@ web/
   src/config/settings.ts   serverUrl/token (see config.ai.md)
   src/viewmodels/          useFeedsVM, useEntriesVM, useEntryVM, useSettingsVM — testable without DOM
   src/views/               Settings.vue, Feeds.vue, Entries.vue, Entry.vue
-  src/router.ts            vue-router (hash or history; history needs server SPA fallback)
-  public/manifest.webmanifest, service worker (app shell cache only; no offline data — out of scope)
+  src/viewmodels/async.ts  shared loading/error wrapper
+  src/inject.ts            provide/inject key for the Client
+  src/router.ts            vue-router history mode (server SPA fallback); guard → /settings when no token
+  public/manifest.webmanifest, public/icon.svg (no service worker: offline is out of scope; install works without it)
 ```
-- Entry view: render server-sanitized `content` in a sandboxed container; page CSP `script-src 'self'`.
-- Tooling: Vite + TypeScript + Vue + vue-router + Vitest (node 24 present). PWA manifest/SW: `vite-plugin-pwa` (ask before adding if a hand-written SW suffices).
+- Entry view: `v-html` of server-sanitized `content`; page CSP meta in `index.html` (`script-src 'self'`, `object-src 'none'`).
+- Entries paging: "더 보기" button using cursor `next` (no infinite scroll).
+- Tooling: Vite + TypeScript + Vue + vue-router + Vitest. No `vite-plugin-pwa`.
+- Icon is SVG only; iOS home screen ignores SVG apple-touch-icon (falls back to screenshot). Add PNG icons if that matters.
 
 ## Verify
 `vitest` for viewmodels and api client (mock fetch); manual: Mac browser at localhost, phone via Tailscale HTTPS URL; check install prompt.

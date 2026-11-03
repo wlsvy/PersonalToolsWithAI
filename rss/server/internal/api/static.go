@@ -2,11 +2,17 @@ package api
 
 import (
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path"
 	"strings"
 )
+
+func init() {
+	// Go's mime table lacks it; browsers expect this type for the PWA manifest.
+	mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 // spa serves files from dir and falls back to index.html for unknown paths,
 // so client-side (history mode) routes survive a reload.

@@ -25,6 +25,11 @@ Single source of truth for every tunable. Code reads config only through `intern
 - Validation at startup: bad duration/int, non-positive values, `RSS_PAGE_DEFAULT > RSS_PAGE_MAX` → exit with message. Durations via `time.ParseDuration`.
 - Optional `.env` loading: no (keep env only; launchd/shell provides it).
 
+## Web app dev (vite.config.ts)
+| Env | Default | Notes |
+|---|---|---|
+| `RSS_DEV_SERVER` | `http://127.0.0.1:8080` | `npm run dev` proxies `/api` here |
+
 ## Web app (PWA, settings model)
 | Key | Storage | Notes |
 |---|---|---|
