@@ -49,6 +49,8 @@ type Store interface {
 - Upsert keeps `read`/`starred` (ON CONFLICT updates only title/content/url/author).
 - `If-None-Match` / `If-Modified-Since`; 304 → only update last_fetched.
 - `http.Client{Timeout}`, `io.LimitReader(MaxBodyBytes)`, User-Agent set. Errors stored in `feeds.error`, never crash loop.
+- SSRF guard (`internal/feed/client.go`): unless `AllowPrivateFetch`, `net.Dialer.Control` rejects non-public resolved IPs (covers redirects + DNS rebinding); `CheckRedirect` allows only http(s), max 10.
+- Entry `url` / feed `siteUrl` kept only if absolute http(s) (`webURL`), so clients never receive `javascript:`/`data:` links.
 - Loop: ticker(Interval); feeds fetched with small bounded concurrency; also on-demand `Refresh(id)`.
 
 ## API v1 contract

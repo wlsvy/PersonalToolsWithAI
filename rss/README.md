@@ -44,4 +44,6 @@ nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -l rss/nvim/tests/render_test.
 ## 보안 메모
 
 - 피드 본문 HTML은 서버가 저장할 때 정리합니다(bluemonday). 웹앱은 CSP로 한 번 더 막습니다.
+- 글 링크는 http/https만 남기고, 내부망 주소(127.0.0.1, 192.168.x, 169.254.x, Tailscale 100.x 등)의 피드는 기본으로 가져오지 않습니다. 로컬 RSSHub 같은 내부 피드를 쓰려면 `RSS_ALLOW_PRIVATE_FETCH=1`을 설정합니다.
+- 웹앱 CSP는 `index.html`의 meta 태그로만 적용합니다(HTTP 헤더는 보내지 않습니다).
 - 토큰은 웹앱의 localStorage에 저장됩니다.

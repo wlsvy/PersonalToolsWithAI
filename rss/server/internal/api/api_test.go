@@ -53,6 +53,7 @@ func setup(t *testing.T, env map[string]string) (string, string) {
 	t.Cleanup(feedSrv.Close)
 
 	env["RSS_TOKEN"] = "secret"
+	env["RSS_ALLOW_PRIVATE_FETCH"] = "1" // test feeds run on loopback
 	cfg, err := config.Load(func(k string) string { return env[k] })
 	if err != nil {
 		t.Fatal(err)

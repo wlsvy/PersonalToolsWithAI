@@ -28,6 +28,7 @@ type Config struct {
 	WebDir            string
 	ReadHeaderTimeout time.Duration
 	ShutdownTimeout   time.Duration
+	AllowPrivateFetch bool
 }
 
 // Load reads config through getenv (os.Getenv in production) and validates it.
@@ -49,6 +50,7 @@ func Load(getenv func(string) string) (Config, error) {
 		WebDir:            l.str("RSS_WEB_DIR", ""),
 		ReadHeaderTimeout: l.dur("RSS_READ_HEADER_TIMEOUT", 10*time.Second),
 		ShutdownTimeout:   l.dur("RSS_SHUTDOWN_TIMEOUT", 10*time.Second),
+		AllowPrivateFetch: l.flag("RSS_ALLOW_PRIVATE_FETCH", false),
 	}
 	if c.Token == "" {
 		l.errs = append(l.errs, errors.New("RSS_TOKEN is required"))
@@ -82,6 +84,19 @@ func (l *loader) dur(key string, def time.Duration) time.Duration {
 		return def
 	}
 	return d
+}
+
+func (l *loader) flag(key string, def bool) bool {
+	v := l.getenv(key)
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		l.errs = append(l.errs, fmt.Errorf("%s: invalid boolean %q", key, v))
+		return def
+	}
+	return b
 }
 
 func (l *loader) num(key string, def int64) int64 {

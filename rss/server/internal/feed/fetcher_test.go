@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -16,7 +17,7 @@ import (
 
 const rss = `<?xml version="1.0"?>
 <rss version="2.0"><channel><title>Test Feed</title><link>https://example.com</link>
-<item><guid>g1</guid><title>One</title><link>https://example.com/1</link>
+<item><guid>g1</guid><title>One</title><link>javascript:alert(1)</link>
 <description><![CDATA[<p>hi</p><script>alert(1)</script>]]></description>
 <pubDate>Mon, 02 Nov 2026 10:00:00 GMT</pubDate></item>
 <item><title>No guid</title><link>https://example.com/2</link></item>
@@ -41,7 +42,7 @@ func setup(t *testing.T) (*Fetcher, store.Store, *httptest.Server, *atomic.Int32
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	cfg, _ := config.Load(func(k string) string { return map[string]string{"RSS_TOKEN": "t"}[k] })
+	cfg, _ := config.Load(func(k string) string { return map[string]string{"RSS_TOKEN": "t", "RSS_ALLOW_PRIVATE_FETCH": "1"}[k] })
 	return New(db, cfg), db, srv, &hits
 }
 
@@ -65,6 +66,10 @@ func TestRefresh(t *testing.T) {
 			t.Fatalf("script not sanitized: %q", full.Content)
 		}
 		switch full.Title {
+		case "One":
+			if full.URL != "" {
+				t.Fatalf("non-http link kept: %q", full.URL)
+			}
 		case "No guid":
 			if full.GUID != "https://example.com/2" {
 				t.Fatalf("guid fallback to link failed: %q", full.GUID)
@@ -93,5 +98,31 @@ func TestRefreshRecordsFetchError(t *testing.T) {
 	}
 	if got.Error == "" {
 		t.Fatal("fetch error not recorded")
+	}
+}
+
+func TestPrivateAddressBlockedByDefault(t *testing.T) {
+	ctx := context.Background()
+	_, db, srv, hits := setup(t)
+	cfg, _ := config.Load(func(k string) string { return map[string]string{"RSS_TOKEN": "t"}[k] })
+	fd, _ := db.AddFeed(ctx, srv.URL, "")
+	got, err := New(db, cfg).Refresh(ctx, fd.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got.Error, "RSS_ALLOW_PRIVATE_FETCH") || hits.Load() != 0 {
+		t.Fatalf("loopback fetch not blocked: error=%q hits=%d", got.Error, hits.Load())
+	}
+}
+
+func TestIsPrivate(t *testing.T) {
+	for addr, want := range map[string]bool{
+		"127.0.0.1": true, "10.1.2.3": true, "192.168.0.1": true, "169.254.169.254": true,
+		"100.100.1.1": true, "::1": true, "::ffff:127.0.0.1": true, "fe80::1": true,
+		"8.8.8.8": false, "2606:4700::1111": false,
+	} {
+		if got := isPrivate(netip.MustParseAddr(addr)); got != want {
+			t.Errorf("%s: got %v want %v", addr, got, want)
+		}
 	}
 }

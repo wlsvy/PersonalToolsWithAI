@@ -25,6 +25,7 @@ func TestInvalid(t *testing.T) {
 		"bad duration":    {"RSS_TOKEN": "t", "RSS_INTERVAL": "soon"},
 		"bad int":         {"RSS_TOKEN": "t", "RSS_PAGE_MAX": "-1"},
 		"default too big": {"RSS_TOKEN": "t", "RSS_PAGE_DEFAULT": "300"},
+		"bad bool":        {"RSS_TOKEN": "t", "RSS_ALLOW_PRIVATE_FETCH": "maybe"},
 	}
 	for name, m := range cases {
 		if _, err := Load(env(m)); err == nil {

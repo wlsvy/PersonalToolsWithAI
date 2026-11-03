@@ -34,7 +34,7 @@ type Fetcher struct {
 func New(st store.Store, cfg config.Config) *Fetcher {
 	return &Fetcher{
 		store:       st,
-		client:      &http.Client{Timeout: cfg.FetchTimeout},
+		client:      newClient(cfg),
 		userAgent:   cfg.UserAgent,
 		maxBytes:    cfg.MaxFeedBytes,
 		concurrency: cfg.FetchConcurrency,
@@ -145,7 +145,7 @@ func (f *Fetcher) fetch(ctx context.Context, fd store.Feed, meta *store.FeedMeta
 	}
 
 	meta.Title = parsed.Title
-	meta.SiteURL = parsed.Link
+	meta.SiteURL = webURL(parsed.Link)
 	meta.ETag = resp.Header.Get("ETag")
 	meta.LastModified = resp.Header.Get("Last-Modified")
 	now := f.now().Unix()
@@ -176,7 +176,7 @@ func (f *Fetcher) toEntry(it *gofeed.Item, now int64) store.Entry {
 	}
 	return store.Entry{
 		GUID:      guid(it, published),
-		URL:       it.Link,
+		URL:       webURL(it.Link),
 		Title:     it.Title,
 		Author:    author,
 		Content:   f.policy.Sanitize(content),

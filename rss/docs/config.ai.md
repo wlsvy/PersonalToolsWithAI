@@ -22,6 +22,7 @@ Single source of truth for every tunable. Code reads config only through `intern
 | `RSS_MAX_JSON_BYTES` | int | `65536` (64KB) | JSON request body limit |
 | `RSS_READ_HEADER_TIMEOUT` | duration | `10s` | `http.Server.ReadHeaderTimeout` |
 | `RSS_SHUTDOWN_TIMEOUT` | duration | `10s` | graceful shutdown wait |
+| `RSS_ALLOW_PRIVATE_FETCH` | bool | `false` | allow feed fetches to loopback/private/link-local/CGNAT (incl. Tailscale 100.64/10) IPs; needed for local RSSHub etc. |
 - Validation at startup: bad duration/int, non-positive values, `RSS_PAGE_DEFAULT > RSS_PAGE_MAX` → exit with message. Durations via `time.ParseDuration`.
 - Optional `.env` loading: no (keep env only; launchd/shell provides it).
 
