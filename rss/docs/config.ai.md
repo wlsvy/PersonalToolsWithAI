@@ -19,7 +19,10 @@ Single source of truth for every tunable. Code reads config only through `intern
 | `RSS_PAGE_MAX` | int | `200` | GET /entries max limit |
 | `RSS_USER_AGENT` | string | `rss-server/<version>` | fetch UA |
 | `RSS_WEB_DIR` | path | empty | built web app (`web/dist`); empty = API only, no static serving |
-- Validation at startup: bad duration/int → exit with message. Durations via `time.ParseDuration`.
+| `RSS_MAX_JSON_BYTES` | int | `65536` (64KB) | JSON request body limit |
+| `RSS_READ_HEADER_TIMEOUT` | duration | `10s` | `http.Server.ReadHeaderTimeout` |
+| `RSS_SHUTDOWN_TIMEOUT` | duration | `10s` | graceful shutdown wait |
+- Validation at startup: bad duration/int, non-positive values, `RSS_PAGE_DEFAULT > RSS_PAGE_MAX` → exit with message. Durations via `time.ParseDuration`.
 - Optional `.env` loading: no (keep env only; launchd/shell provides it).
 
 ## Web app (PWA, settings model)

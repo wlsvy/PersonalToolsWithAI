@@ -21,10 +21,11 @@ server/
 ```go
 type Store interface {
     ListFeeds(ctx) ([]Feed, error)
+    GetFeed(ctx, id int64) (Feed, error)
     AddFeed(ctx, url, category string) (Feed, error)
     DeleteFeed(ctx, id int64) error
     UpdateFeedMeta(ctx, id int64, m FeedMeta) error   // title, site_url, etag, last_modified, last_fetched, error
-    UpsertEntries(ctx, feedID int64, es []Entry) (inserted int, err error)
+    UpsertEntries(ctx, feedID int64, es []Entry) error
     ListEntries(ctx, f EntryFilter) ([]Entry, error)  // feed, unread, starred, limit, before cursor
     GetEntry(ctx, id int64) (Entry, error)
     UpdateEntry(ctx, id int64, read, starred *bool) error
@@ -33,7 +34,8 @@ type Store interface {
     Close() error
 }
 ```
-- `ErrNotFound` sentinel in `store`; api maps to 404.
+- `ErrNotFound` / `ErrDuplicate` sentinels in `store`; api maps to 404 / 409.
+- `AddFeed` uses `INSERT ... ON CONFLICT DO NOTHING RETURNING id`; no row → `ErrDuplicate`.
 
 ## Schema (SQLite)
 - `feeds(id INTEGER PK, url TEXT UNIQUE NOT NULL, title, site_url, category, etag, last_modified, last_fetched INTEGER, error TEXT)`
