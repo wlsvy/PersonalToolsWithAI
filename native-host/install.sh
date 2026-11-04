@@ -21,4 +21,3 @@ cat > "$DEST/com.personaltools.clip.json" <<EOF
 }
 EOF
 echo "설치됨: $DEST/com.personaltools.clip.json (node: $NODE)"
-echo "최초 1회 로그인: CLAUDE_CONFIG_DIR=~/.claude-clip claude   (실행 후 /login)"

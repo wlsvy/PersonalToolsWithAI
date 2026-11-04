@@ -1,20 +1,27 @@
 // Chrome Native Messaging 호스트. 확장이 보낸 본문을 claude -p로 요약·번역해 돌려준다.
-// Chrome이 Dock에서 실행되면 PATH가 /usr/bin:/bin 뿐이라 install.sh가 만든 wrapper가 node 절대 경로로 실행한다.
+// Chrome이 Dock에서 실행되면 PATH가 /usr/bin:/bin 뿐이라 install.sh(Windows는 install.ps1)가 만든 wrapper가 node 절대 경로로 실행한다.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { delimiter, dirname, join } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-// 전역 ~/.claude(CLAUDE.md, 플러그인, hook)가 출력에 섞이지 않게 별도 프로필을 쓴다
-const CONFIG_DIR = join(homedir(), '.claude-clip');
-const CLAUDE = [...(process.env.PATH ?? '').split(delimiter), '/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local/bin')]
-  .filter(Boolean)
-  .map((dir) => join(dir, 'claude'))
-  .find(existsSync);
+const IS_WIN = process.platform === 'win32';
+const BINS = IS_WIN ? ['claude.exe', 'claude.cmd', 'claude'] : ['claude'];
+const DIRS = [
+  ...(process.env.PATH ?? '').split(delimiter),
+  ...(IS_WIN
+    ? [
+        process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Links'),
+        process.env.APPDATA && join(process.env.APPDATA, 'npm'),
+        join(homedir(), '.local', 'bin'),
+      ]
+    : ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin')]),
+].filter(Boolean);
+const CLAUDE = DIRS.flatMap((dir) => BINS.map((bin) => join(dir, bin))).find(existsSync);
 
-// 메시지 형식: 4바이트 길이(native byte order — macOS는 little-endian) + UTF-8 JSON
+// 메시지 형식: 4바이트 길이(native byte order — macOS/Windows x64·ARM64는 little-endian) + UTF-8 JSON
 async function readMsg() {
   let buf = Buffer.alloc(0);
   for await (const chunk of process.stdin) {
@@ -35,13 +42,13 @@ function sendMsg(obj) {
 function ask(model, prompt, text) {
   if (!CLAUDE) throw new Error('claude CLI를 찾지 못했습니다.');
   // --tools '': 입력이 신뢰할 수 없는 웹 본문이라 도구를 모두 끈다.
+  // --setting-sources '' + --strict-mcp-config: 기본 로그인은 쓰되 전역 CLAUDE.md·플러그인·hook·MCP는 섞지 않는다.
   // cwd를 임시 폴더로: 이 저장소의 CLAUDE.md/.claude가 읽히지 않게
   const r = spawnSync(
     CLAUDE,
     ['-p', '--model', model, '--system-prompt', readFileSync(join(HERE, 'prompts', prompt), 'utf8'),
-      '--tools', '', '--no-session-persistence'],
-    { input: text, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, cwd: tmpdir(),
-      env: { ...process.env, CLAUDE_CONFIG_DIR: CONFIG_DIR } },
+      '--tools', '', '--no-session-persistence', '--setting-sources', '', '--strict-mcp-config'],
+    { input: text, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, cwd: tmpdir() },
   );
   if (r.error) throw r.error;
   if (r.status !== 0) throw new Error((r.stderr || r.stdout).trim() || `claude exit ${r.status}`);
@@ -55,7 +62,7 @@ function handle(msg) {
 }
 
 // import(테스트)할 때는 실행하지 않는다
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     sendMsg(handle(await readMsg()));
   } catch (e) {

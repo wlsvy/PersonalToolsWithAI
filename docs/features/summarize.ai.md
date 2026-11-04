@@ -16,7 +16,8 @@
 | `mytools/result/vendor/mermaid.min.js` | mermaid 12.2.0 (UMD, `globalThis.mermaid`, 5.5MB) |
 | `native-host/clip_host.mjs` | Native Messaging 호스트: `claude -p` 호출 |
 | `native-host/prompts/summary.md`, `translate.md` | 시스템 프롬프트 |
-| `native-host/install.sh` | 호스트 등록 JSON + node wrapper 생성 |
+| `native-host/install.sh` | macOS용 호스트 등록 JSON + node wrapper(`.sh`) 생성 |
+| `native-host/install.ps1` | Windows용 호스트 등록 JSON + node wrapper(`.cmd`) 생성 + 레지스트리 등록 |
 
 `native-host/prompts/*.md`는 Folo Neovim 플러그인도 함께 씁니다([folo/docs/ai.ai.md](../../folo/docs/ai.ai.md)). 호출 인자를 바꾸면 양쪽을 맞춰야 합니다.
 
@@ -56,7 +57,7 @@
 - `storage.session`으로 넘기는 이유: URL 쿼리는 본문(수십 KB)을 싣기에 길고, `sendMessage`는 탭 로딩 전에 도착하는 경쟁 상태가 있다. session은 메모리 전용이라 브라우저 종료 시 사라진다.
   - 탭을 그냥 닫으면 키가 남는다. 브라우저 종료 시 사라지므로 정리 코드 없음. 쌓여서 문제되면 `tabs.onRemoved`로 정리.
 - 요청 주체를 결과 탭으로 둔 이유: popup은 포커스를 잃으면 닫히고, service worker는 유휴 시 종료될 수 있다. 열린 탭은 수 분짜리 번역 동안에도 살아 있다.
-- `sendNativeMessage`(일회성)를 쓴다. 호스트는 메시지마다 실행되고 응답 후 종료. 실패(호스트 미등록 등)는 `ask()`가 `{ ok: false, error }`로 바꾸고, `not found`면 install.sh 안내를 붙인다.
+- `sendNativeMessage`(일회성)를 쓴다. 호스트는 메시지마다 실행되고 응답 후 종료. 실패(호스트 미등록 등)는 `ask()`가 `{ ok: false, error }`로 바꾸고, `not found`면 install.sh / install.ps1 안내를 붙인다.
 - popup [요약]은 활성 탭이 아닌 탭에 주입 → `host_permissions: <all_urls>` 필요.
 - `stripLinkTitles`: turndown이 URL의 괄호와 title의 따옴표를 `\`로 이스케이프하는 것을 고려한 정규식. `[1](url "저자…")` → `[1](url)`.
 - `stripCitations`: 텍스트가 숫자(또는 `\[n\]`, `n–m`)뿐인 링크와 그 사이 쉼표·대시를 묶음째 삭제합니다. 요약·번역 입력과 "원문 Markdown" 표시 모두에서 빠집니다.
@@ -72,29 +73,37 @@
 
 ## 호스트 측 결정 (`clip_host.mjs`)
 
-- 호출: `claude -p --model <m> --system-prompt <prompts/*.md 내용> --tools '' --no-session-persistence`, 본문은 stdin.
+- 호출: `claude -p --model <m> --system-prompt <prompts/*.md 내용> --tools '' --no-session-persistence --setting-sources '' --strict-mcp-config`, 본문은 stdin.
   - `spawnSync`의 `input` + `encoding: 'utf8'` (조각 단위로 이어 붙이면 멀티바이트가 깨질 수 있음), `maxBuffer` 16MB.
-- `CLAUDE_CONFIG_DIR=~/.claude-clip`: 전역 `~/.claude`의 CLAUDE.md·플러그인·hook이 출력에 섞이지 않게 별도 프로필. 최초 1회 로그인 필요.
+- `--setting-sources '' --strict-mcp-config`: 기본 프로필 로그인을 그대로 쓰면서 전역 `~/.claude`의 CLAUDE.md·플러그인·hook·MCP가 출력에 섞이지 않게. 별도 `CLAUDE_CONFIG_DIR` 프로필은 로그인을 따로 해야 해서 쓰지 않는다.
 - `cwd: tmpdir()`: 이 저장소의 CLAUDE.md/.claude가 읽히지 않게.
 - `--tools ''`: 입력이 신뢰할 수 없는 웹 본문 → 프롬프트 인젝션 대비. 파일은 쓰지 않는다.
 - `--bare` 금지: `ANTHROPIC_API_KEY`/apiKeyHelper만 쓰고 OAuth·키체인을 읽지 않아 구독 로그인이 안 된다.
 - claude.ai 쿠키로 내부 API 호출은 하지 않는다 (비공개 API, 약관·계정 위험).
-- `claude` 위치: `PATH` + `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin`에서 탐색.
-- 메시지 프로토콜: 4바이트 길이(native byte order, macOS little-endian) + UTF-8 JSON. 호스트 → Chrome 응답은 최대 1MB.
-- `process.argv[1]`이 자기 자신일 때만 main 실행 → 테스트에서 import 가능.
+- `claude` 위치:
+  - macOS/Linux: `PATH` + `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin`에서 `claude` 탐색.
+  - Windows: `PATH` + `%LOCALAPPDATA%\Microsoft\WinGet\Links`, `%APPDATA%\npm`, `~/.local/bin`에서 `claude.exe`, `claude.cmd`, `claude` 탐색.
+- 메시지 프로토콜: 4바이트 길이(native byte order, little-endian) + UTF-8 JSON. 호스트 → Chrome 응답은 최대 1MB.
+- `resolve(process.argv[1])`이 자기 자신일 때만 main 실행 → 테스트에서 import 가능.
 
 ## 설치 구조
 
-- Dock에서 실행된 Chrome은 PATH가 `/usr/bin:/bin`뿐 → `install.sh`가 `command -v node` 절대 경로를 박은 wrapper를 만든다.
-- 생성물 (저장소 밖): `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
-  - `com.personaltools.clip.sh`: `exec "<node>" "<repo>/native-host/clip_host.mjs"`
-  - `com.personaltools.clip.json`: `path` = wrapper, `allowed_origins` = `chrome-extension://<ID>/`
+- **macOS (`install.sh`)**:
+  - Dock에서 실행된 Chrome은 PATH가 `/usr/bin:/bin`뿐 → `install.sh`가 `command -v node` 절대 경로를 박은 wrapper를 만든다.
+  - 생성물 (저장소 밖): `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
+    - `com.personaltools.clip.sh`: `exec "<node>" "<repo>/native-host/clip_host.mjs"`
+    - `com.personaltools.clip.json`: `path` = wrapper, `allowed_origins` = `chrome-extension://<ID>/`
+- **Windows (`install.ps1`)**:
+  - 확장 ID 인자 생략 시 `mytools/` 절대 경로(UTF-16LE SHA-256 앞 16바이트 `a`~`p` 매핑)로 Chrome 압축해제 확장 ID를 자동 계산한다.
+  - 생성물 (저장소 밖): `%LOCALAPPDATA%\Google\Chrome\NativeMessagingHosts\`
+    - `com.personaltools.clip.cmd`: `@echo off` + `"<node>" "<repo>\native-host\clip_host.mjs"` (BOM 없는 UTF-8)
+    - `com.personaltools.clip.json`: `path` = wrapper, `allowed_origins` = `chrome-extension://<ID>/`
+  - 레지스트리: `HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.personaltools.clip`의 기본값에 `.json` 경로 등록.
 - 다시 실행해야 할 때: 확장 ID 변경(`mytools/` 경로 변경), `native-host/` 이동, node 경로 변경(nvm 등).
 
 ## 미확인
 
 - 논문 한 편 전문 번역이 한 번의 호출 출력 한도에 들어가는지. 안 되면 `## ` 제목 단위로 나눠 호출 후 이어 붙인다.
-- `CLAUDE_CONFIG_DIR`별로 키체인 로그인이 분리되는지 (기본 프로필 로그인이 유지되는지).
 - marked 렌더링·mermaid는 브라우저에서만 확인 가능 (외부 코드라 node 실행 안 함).
 
 ## 테스트

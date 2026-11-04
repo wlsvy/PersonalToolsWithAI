@@ -61,7 +61,7 @@ async function ask(msg) {
   try {
     return await chrome.runtime.sendNativeMessage(HOST, msg);
   } catch (e) {
-    const hint = /not found/i.test(e.message) ? ' — native-host/install.sh 를 먼저 실행하세요.' : '';
+    const hint = /not found/i.test(e.message) ? ' — native-host/install.sh (Windows는 install.ps1) 를 먼저 실행하세요.' : '';
     return { ok: false, error: e.message + hint };
   }
 }

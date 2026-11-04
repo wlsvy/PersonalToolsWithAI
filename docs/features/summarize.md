@@ -37,11 +37,10 @@
 ## 설치 (최초 1회)
 
 1. `chrome://extensions`에서 확장을 새로고침하고 확장 ID를 복사
-2. 터미널에서 `./native-host/install.sh <확장 ID>`
-3. 새 터미널에서 아래 명령 실행 → 로그인 → 종료
-   - bash: `CLAUDE_CONFIG_DIR=~/.claude-clip claude`
-   - PowerShell: `$env:CLAUDE_CONFIG_DIR = "$HOME\.claude-clip"; claude`
-   - 현재 터미널 세션에서만 유지됨
+2. 터미널에서 호스트 등록 스크립트 실행
+   - macOS: `./native-host/install.sh <확장 ID>`
+   - Windows (PowerShell): `.\native-host\install.ps1 <확장 ID>` (확장 ID 생략 시 `mytools/` 경로로 자동 계산)
+3. `claude`에 로그인되어 있지 않으면 한 번 실행해 `/login`
 
 결과 탭에 "Not logged in"이 뜨면 3번을, "host not found"가 뜨면 2번을 다시 한다. `mytools/` 폴더를 옮기면 확장 ID가 바뀌므로 2번을 다시 한다.
 
