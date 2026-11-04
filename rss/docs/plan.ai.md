@@ -33,7 +33,7 @@ rss/
 | App (2026-11-04) | TS PWA, Vue 3, MVVM, served by Go | MAUI dropped; see app.ai.md |
 | Deploy (2026-11-04) | This Mac now, Tailscale serve for phone, cloud later | No host-specific code; env only (config.ai.md) |
 
-Open (ask before deciding): config defaults in config.ai.md pending confirmation.
+Config defaults in config.ai.md confirmed as-is (2026-11-05).
 
 Rule: any further extensibility-related choice → ask user (see `.claude/skills/plan-docs`).
 

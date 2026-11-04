@@ -2,7 +2,7 @@
 
 요약: [config.md](config.md)
 
-Single source of truth for every tunable. Code reads config only through `internal/config` (server), the settings model (web app), `setup()` opts (nvim). No literal defaults elsewhere. Defaults below are proposals pending user confirmation.
+Single source of truth for every tunable. Code reads config only through `internal/config` (server), the settings model (web app), `setup()` opts (nvim). No literal defaults elsewhere. Defaults below are user-confirmed (2026-11-05).
 
 ## Server (env, parsed in `internal/config`)
 | Env | Type | Default | Notes |
