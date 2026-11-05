@@ -18,6 +18,16 @@ local defaults = {
     browser_cmd = nil, -- argv prefix; nil = detect Chrome/Chromium
     browser_timeout_ms = 30000,
   },
+  ai = {
+    cmd = { "claude" },
+    config_dir = "~/.claude-clip", -- CLAUDE_CONFIG_DIR, shared with native-host
+    models = { summary = "sonnet", translation = "sonnet" },
+    prompts = {}, -- { summary = path, translation = path }; default native-host/prompts/*.md
+    concurrency = 3,
+    timeout_ms = { summary = 600000, translation = 1800000 },
+    confirm_over = 10, -- confirm before queueing more entries than this
+    dir = nil, -- default stdpath("cache")/folo/summaries
+  },
   keymaps = {
     list = {
       open = "<CR>",
@@ -26,9 +36,13 @@ local defaults = {
       open_url = "gx",
       next_page = "]p",
       refresh = "r",
+      summarize = "s",
+      translate = "t",
+      delete_summary = "x",
       close = "q",
+      help = "?",
     },
-    preview = { open_url = "gx", browser = "R", close = "q" },
+    preview = { open_url = "gx", browser = "R", close = "q", help = "?" },
   },
 }
 

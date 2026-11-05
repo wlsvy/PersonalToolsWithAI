@@ -24,8 +24,8 @@ article = {
   browser_timeout_ms = 30000,
 },
 keymaps = {
-  list = { open = "<CR>", toggle_select = "<Tab>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q" },
-  preview = { open_url = "gx", browser = "R", close = "q" },
+  list = { open = "<CR>", toggle_select = "<Tab>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q", help = "?" },
+  preview = { open_url = "gx", browser = "R", close = "q", help = "?" },
 }
 ```
 `keymaps.timeline`/`keymaps.entry` are removed (single user, no aliases).
@@ -57,6 +57,11 @@ Debounce on `CursorMoved`; same entry is a no-op. Preview never marks read. `<CR
 - `<Tab>` toggles selection on the current item and moves down. Selected rows show `+` in the first column; read state stays in the second (`*` = unread).
 - Selection is per list, survives paging and read toggles, cleared by refresh and after a successful open.
 - `gx` opens all selected, else the current item. http/https only; skipped items are reported. Confirm above `open_confirm_over`. Uses `vim.ui.open`; report per-URL failures.
+
+## Help popup
+- `?` toggles a non-focusable editor-relative float at the top right, in `ui.lua`.
+- Rows come from the live `keymaps` so remapped keys show and disabled keys drop out; descriptions and notes live in the `HELP` table. Add a row when adding a keymap.
+- Pressing `?` in the other view switches content. `<CR>`, preview `q`, and list `q` close it.
 
 ## Verify
 ```sh

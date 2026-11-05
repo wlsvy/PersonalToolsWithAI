@@ -2,7 +2,7 @@
 
 상세: [nvim.ai.md](nvim.ai.md)
 
-분할 화면과 미리보기는 [preview.md](preview.md)에 있습니다.
+분할 화면과 미리보기는 [preview.md](preview.md), AI 요약과 번역은 [ai.md](ai.md), 작업 기록은 [progress.md](progress.md)에 있습니다.
 
 ## 목적과 배경
 

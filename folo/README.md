@@ -35,6 +35,8 @@ folo login
 
 본문이 짧은 글은 Folo 추출, curl 순서로 원문을 가져와 피드 본문 아래에 덧붙입니다. curl로 읽지 못하는 페이지는 미리보기에서 `R`을 눌러 헤드리스 Chrome으로 렌더링합니다. Chrome은 매번 빈 프로필로 실행합니다. 자동 curl을 끄려면 `opts = { article = { auto_fetch = false } }`로 설정합니다.
 
+AI 요약과 번역은 큐로 처리하며 기본 3개까지 동시에 실행합니다. 결과는 글 아래의 `└ summary` 자식 항목으로 표시되고, 커서를 올리면 미리보기에 내용이 나옵니다. 파일은 Neovim 캐시 폴더에 저장되어 재시작 후에도 남습니다. 크롬 확장과 같은 프롬프트와 전용 프로필을 쓰므로 `CLAUDE_CONFIG_DIR=~/.claude-clip claude`로 한 번 로그인되어 있어야 합니다. 자세한 내용은 [docs/ai.md](docs/ai.md)에 있습니다.
+
 ### 목록 화면
 
 | 키 | 동작 |
@@ -45,7 +47,11 @@ folo login
 | `gx` | 선택한 글을 모두 브라우저로 엽니다. 선택이 없으면 현재 글을 엽니다. 10개를 넘으면 먼저 확인합니다. |
 | `]p` | 다음 페이지를 불러옵니다. |
 | `r` | 목록을 새로 불러옵니다. |
+| `s` | 선택한 글을 AI로 요약합니다. 선택이 없으면 현재 글을 요약합니다. |
+| `t` | 번역을 요약 아래에 덧붙입니다. 요약이 없으면 요약부터 실행합니다. |
+| `x` | 현재 글의 요약 파일을 삭제합니다. |
 | `q` | 목록과 미리보기를 닫습니다. |
+| `?` | 동작과 단축키 설명창을 열거나 닫습니다. |
 
 ### 미리보기 화면
 
@@ -54,6 +60,7 @@ folo login
 | `gx` | 원문을 브라우저로 엽니다. |
 | `R` | 헤드리스 Chrome으로 렌더링한 원문을 표시합니다. |
 | `q` | 목록으로 돌아갑니다. |
+| `?` | 동작과 단축키 설명창을 열거나 닫습니다. |
 
 본문 변환에는 pandoc을 쓰고, 없으면 태그만 제거합니다.
 
@@ -62,4 +69,5 @@ folo login
 ```sh
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/cli_test.lua
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/article_test.lua
+nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/ai_test.lua
 ```

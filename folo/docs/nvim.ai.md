@@ -15,6 +15,7 @@ folo/
     lua/folo/cli.lua     only module that knows CLI args and the JSON envelope
     lua/folo/ui.lua      list + preview windows, selection, keymaps
     lua/folo/article.lua fetches article pages (curl, headless browser), see preview.ai.md
+    lua/folo/ai.lua      summary/translation queue and files, see ai.ai.md
     lua/folo/render.lua  html -> text; own copy of the sample's module, not shared
     tests/cli_test.lua   headless CLI-layer self-check using tests/fake_folo.sh
     tests/article_test.lua  article fetching and UI self-check

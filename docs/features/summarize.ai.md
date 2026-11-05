@@ -17,6 +17,8 @@
 | `native-host/prompts/summary.md`, `translate.md` | 시스템 프롬프트 |
 | `native-host/install.sh` | 호스트 등록 JSON + node wrapper 생성 |
 
+`native-host/prompts/*.md`는 Folo Neovim 플러그인도 함께 씁니다([folo/docs/ai.ai.md](../../folo/docs/ai.ai.md)). 호출 인자를 바꾸면 양쪽을 맞춰야 합니다.
+
 ## 흐름
 
 ```

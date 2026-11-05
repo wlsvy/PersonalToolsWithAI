@@ -1,3 +1,4 @@
+local ai = require("folo.ai")
 local article = require("folo.article")
 local cli = require("folo.cli")
 local render = require("folo.render")
@@ -11,7 +12,7 @@ local state = {}
 -- Finished previews by entry id, kept for the session.
 local cache = {}
 -- The list driving the preview, and a counter that makes older async results stale.
-local preview = { list = nil, entry = nil, generation = 0 }
+local preview = { list = nil, entry = nil, child = false, generation = 0 }
 
 local function notify_err(err)
   vim.notify("folo: " .. err, vim.log.levels.ERROR)
@@ -127,13 +128,9 @@ local function draw_preview(view)
   end
 end
 
-local function is_current(generation)
-  return preview.generation == generation
-end
-
-local function show_article(view, generation, html, source, finish)
+local function show_article(view, wanted, html, source, finish)
   render.to_lines(html, require("folo").get_config().render, function(lines)
-    if not is_current(generation) then
+    if not wanted() then
       return
     end
     view.article, view.source, view.status = lines, source, nil
@@ -145,75 +142,93 @@ local function article_failed(view, reason)
   view.status = ("Could not load article: %s. Press R to render in a browser."):format(reason)
 end
 
-local function fetch_with_curl(view, generation, finish)
+local function fetch_with_curl(view, wanted, finish)
   article.fetch(view.entry.url, function(err, html)
-    if not is_current(generation) then
+    if not wanted() then
       return
     end
     if err then
       article_failed(view, err)
       return finish()
     end
-    show_article(view, generation, html, "curl", finish)
+    show_article(view, wanted, html, "curl", finish)
   end)
 end
 
 -- Feed body is kept; thin bodies get the article appended below it.
-local function fetch_article(view, generation, finish)
+local function fetch_article(view, wanted, on_update, finish)
   local cfg = require("folo").get_config().article
   cli.readability(view.entry.id, function(err, content)
-    if not is_current(generation) then
+    if not wanted() then
       return
     end
     if not err and article.text_len(content) >= cfg.thin_chars then
-      return show_article(view, generation, content, "Folo", finish)
+      return show_article(view, wanted, content, "Folo", finish)
     end
     if cfg.auto_fetch then
       view.status = "Loading article…"
-      draw_preview(view)
-      return fetch_with_curl(view, generation, finish)
+      on_update(view)
+      return fetch_with_curl(view, wanted, finish)
     end
     article_failed(view, err or "no readable content")
     finish()
   end)
 end
 
-local function show_preview(e)
-  preview.generation = preview.generation + 1
-  preview.entry = e
-  local generation = preview.generation
+-- Runs the content chain. wanted() false stops it early; on_done gets the view, with
+-- view.error when the entry itself could not be loaded (those views are not cached).
+local function load_view(e, wanted, on_update, on_done)
   if cache[e.id] then
-    return draw_preview(cache[e.id])
+    return on_done(cache[e.id])
   end
   local view = { entry = e, status = "Loading…" }
-  draw_preview(view)
+  on_update(view)
   local cfg = require("folo").get_config()
   cli.entry(e.id, function(err, full)
-    if not is_current(generation) then
+    if not wanted() then
       return
     end
     if err then
-      view.status = err
-      return draw_preview(view)
+      view.status, view.error = err, err
+      return on_done(view)
     end
     local html = full.content or ""
     render.to_lines(html, cfg.render, function(body)
-      if not is_current(generation) then
+      if not wanted() then
         return
       end
       view.body, view.status = body, nil
       local function finish()
         cache[e.id] = view
-        draw_preview(view)
+        on_done(view)
       end
       if article.text_len(html) >= cfg.article.thin_chars then
         return finish()
       end
       view.status = "Loading article…"
-      draw_preview(view)
-      fetch_article(view, generation, finish)
+      on_update(view)
+      fetch_article(view, wanted, on_update, finish)
     end)
   end)
+end
+
+local function next_generation()
+  preview.generation = preview.generation + 1
+  local generation = preview.generation
+  return function()
+    return preview.generation == generation
+  end
+end
+
+local function show_preview(e)
+  local wanted = next_generation()
+  preview.entry, preview.child = e, false
+  local function draw(view)
+    if wanted() then
+      draw_preview(view)
+    end
+  end
+  load_view(e, wanted, draw, draw)
 end
 
 local function render_in_browser()
@@ -221,24 +236,76 @@ local function render_in_browser()
   if not e then
     return
   end
-  preview.generation = preview.generation + 1
-  local generation = preview.generation
+  local wanted = next_generation()
+  preview.child = false
   local view = cache[e.id] or { entry = e }
   view.status = "Rendering in a headless browser…"
   draw_preview(view)
   article.render_browser(e.url, function(err, html)
-    if not is_current(generation) then
+    if not wanted() then
       return
     end
     if err then
       view.status = "Browser render failed: " .. err
       return draw_preview(view)
     end
-    show_article(view, generation, html, "browser", function()
+    show_article(view, wanted, html, "browser", function()
       cache[e.id] = view
       draw_preview(view)
     end)
   end)
+end
+
+-- AI --------------------------------------------------------------------
+
+-- ai_source(e, cb(err, markdown)): the text sent to Claude.
+local function ai_source(e, cb)
+  local function always()
+    return true
+  end
+  load_view(e, always, function() end, function(view)
+    if view.error then
+      return cb(view.error)
+    end
+    local content = vim.deepcopy(view.body or {})
+    vim.list_extend(content, view.article or {})
+    local text = vim.trim(table.concat(content, "\n"))
+    local thin_chars = require("folo").get_config().article.thin_chars
+    -- A link alone would invite the model to invent the article.
+    if not view.article and vim.fn.strchars(text) < thin_chars then
+      return cb("article could not be loaded; press R on the entry's preview, then retry")
+    end
+    cb(nil, ("# %s\n\n%s\n\n%s"):format(one_line(e.title), e.url, text))
+  end)
+end
+
+local function ai_progress(info)
+  if info.summary then
+    return "Summary " .. info.summary .. "…"
+  end
+  if info.translation then
+    return "Translation " .. info.translation .. "…"
+  end
+  return info.error and ("Failed: " .. info.error) or nil
+end
+
+local function draw_summary(e)
+  local lines = ai.read(e.id) or { "# " .. one_line(e.title), "" }
+  local progress = ai_progress(ai.info(e.id))
+  if progress then
+    vim.list_extend(lines, { "", "> " .. progress })
+  end
+  set_lines(preview_buf(), lines)
+  local win = preview_win()
+  if win then
+    vim.api.nvim_win_set_cursor(win, { 1, 0 })
+  end
+end
+
+local function show_summary(e)
+  next_generation()
+  preview.entry, preview.child = e, true
+  draw_summary(e)
 end
 
 local function open_urls(entries)
@@ -271,27 +338,200 @@ local function open_urls(entries)
   return failed == 0 and #urls > 0
 end
 
+-- Help ------------------------------------------------------------------
+
+local HELP = {
+  list = {
+    title = " Folo list ",
+    notes = { "Moving the cursor previews an entry without marking it read.", "Row marks: + selected, * unread. Summaries appear as child rows." },
+    keys = {
+      { "open", "Mark read and focus the preview" },
+      { "toggle_select", "Select or unselect, then move down" },
+      { "toggle_read", "Toggle read" },
+      { "open_url", "Open selected entries on the web, or the current one" },
+      { "summarize", "AI summary of selected entries, or the current one" },
+      { "translate", "AI translation appended below the summary" },
+      { "delete_summary", "Delete the entry's summary file" },
+      { "next_page", "Load the next page" },
+      { "refresh", "Reload from the first page" },
+      { "close", "Close the list and preview" },
+      { "help", "Toggle this help" },
+    },
+  },
+  preview = {
+    title = " Folo preview ",
+    notes = { "Short feed bodies get the article appended (Folo, then curl)." },
+    keys = {
+      { "open_url", "Open the entry on the web" },
+      { "browser", "Render the article in a headless browser" },
+      { "close", "Back to the list" },
+      { "help", "Toggle this help" },
+    },
+  },
+}
+
+local help = { win = nil, kind = nil }
+
+local function close_help()
+  if help.win and vim.api.nvim_win_is_valid(help.win) then
+    vim.api.nvim_win_close(help.win, true)
+  end
+  help.win, help.kind = nil, nil
+end
+
+local function help_lines(kind)
+  local keymaps = require("folo").get_config().keymaps[kind]
+  local rows = {}
+  local key_width = 0
+  for _, item in ipairs(HELP[kind].keys) do
+    -- Built from the live keymaps so remapped or disabled keys stay accurate.
+    local key = keymaps[item[1]]
+    if key then
+      table.insert(rows, { key, item[2] })
+      key_width = math.max(key_width, vim.fn.strdisplaywidth(key))
+    end
+  end
+  local lines = {}
+  for _, row in ipairs(rows) do
+    local padding = (" "):rep(key_width - vim.fn.strdisplaywidth(row[1]))
+    table.insert(lines, (" %s%s  %s "):format(row[1], padding, row[2]))
+  end
+  table.insert(lines, "")
+  for _, note in ipairs(HELP[kind].notes) do
+    table.insert(lines, " " .. note .. " ")
+  end
+  return lines
+end
+
+-- The popup never takes focus, so the same key closes it and navigation keeps working.
+local function toggle_help(kind)
+  local same = help.kind == kind and help.win and vim.api.nvim_win_is_valid(help.win)
+  close_help()
+  if same then
+    return
+  end
+  local lines = help_lines(kind)
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden = "wipe"
+  help.win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor",
+    anchor = "NE",
+    row = 1,
+    col = vim.o.columns - 1,
+    width = math.min(width, math.max(1, vim.o.columns - 4)),
+    height = math.min(#lines, math.max(1, vim.o.lines - 5)),
+    style = "minimal",
+    border = "rounded",
+    title = HELP[kind].title,
+    focusable = false,
+    zindex = 60,
+  })
+  vim.wo[help.win].wrap = true
+  help.kind = kind
+end
+
 -- List ------------------------------------------------------------------
 
+local function child_text(info)
+  if info.error then
+    return "failed: " .. one_line(info.error)
+  end
+  local parts = {}
+  if info.summary then
+    table.insert(parts, "summary " .. info.summary)
+  elseif info.has_summary then
+    table.insert(parts, "summary")
+  end
+  if info.translation then
+    table.insert(parts, "translation " .. info.translation)
+  elseif info.has_translation then
+    table.insert(parts, "translation")
+  end
+  return table.concat(parts, " + ")
+end
+
+local function same_row(a, b)
+  return a.entry == b.entry and a.child == b.child
+end
+
 local function redraw(buf)
-  local lines = {}
-  for _, e in ipairs(state[buf].items) do
+  local s = state[buf]
+  local win = vim.fn.bufwinid(buf)
+  local current = win ~= -1 and s.rows[vim.api.nvim_win_get_cursor(win)[1]] or nil
+  local lines, rows = {}, {}
+  for _, e in ipairs(s.items) do
     local selected = e.selected and "+" or " "
     local mark = e.read and " " or "*"
     table.insert(lines, ("%s%s %s  %s  %s"):format(selected, mark, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
+    table.insert(rows, { entry = e, child = false })
+    local info = ai.info(e.id)
+    if info.visible then
+      table.insert(lines, "   └ " .. child_text(info))
+      table.insert(rows, { entry = e, child = true })
+    end
   end
+  s.rows = rows
   set_lines(buf, #lines > 0 and lines or { "(no entries)" })
+  -- Child rows shift everything below them; stay on the same item.
+  if current then
+    -- A removed child row falls back to its entry.
+    local target
+    for i, row in ipairs(rows) do
+      if same_row(row, current) then
+        target = i
+        break
+      elseif row.entry == current.entry and not row.child then
+        target = i
+      end
+    end
+    if target then
+      vim.api.nvim_win_set_cursor(win, { target, 0 })
+    end
+  end
 end
 
-local function list_item(buf)
+local function list_row(buf)
   local win = vim.fn.bufwinid(buf)
   if win == -1 or not state[buf] then
     return nil
   end
-  return state[buf].items[vim.api.nvim_win_get_cursor(win)[1]]
+  return state[buf].rows[vim.api.nvim_win_get_cursor(win)[1]]
 end
 
+local function list_item(buf)
+  local row = list_row(buf)
+  return row and row.entry
+end
+
+local function show_row(row)
+  if row.child then
+    if not (preview.child and preview.entry == row.entry) then
+      show_summary(row.entry)
+    end
+  elseif preview.child or preview.entry ~= row.entry then
+    show_preview(row.entry)
+  end
+end
+
+ai.on_change(function(id)
+  for buf in pairs(state) do
+    if vim.api.nvim_buf_is_valid(buf) then
+      redraw(buf)
+    end
+  end
+  if preview.child and preview.entry and preview.entry.id == id then
+    draw_summary(preview.entry)
+  end
+end)
+
 local function focus_list()
+  close_help()
   local buf = preview.list
   if not buf or not vim.api.nvim_buf_is_valid(buf) then
     return
@@ -314,6 +554,9 @@ local function setup_preview_keys(cfg)
     end,
     browser = render_in_browser,
     close = focus_list,
+    help = function()
+      toggle_help("preview")
+    end,
   })
 end
 
@@ -334,18 +577,16 @@ function M.timeline(opts, title)
   local buf = create_scratch("folo://timeline/" .. title, "folo-timeline")
   vim.api.nvim_set_current_buf(buf)
   vim.wo.wrap = false
-  state[buf] = { items = {}, next = nil, loading = false }
+  state[buf] = { items = {}, rows = {}, next = nil, loading = false }
   preview.list = buf
   ensure_preview_win(cfg)
   setup_preview_keys(cfg)
 
   local function preview_current()
-    local e = list_item(buf)
-    if e then
+    local row = list_row(buf)
+    if row then
       preview.list = buf
-      if preview.entry ~= e then
-        show_preview(e)
-      end
+      show_row(row)
     end
   end
 
@@ -395,28 +636,79 @@ function M.timeline(opts, title)
     group = "folo_list_" .. buf,
     buffer = buf,
     callback = function()
-      local requested = list_item(buf)
+      local requested = list_row(buf)
       vim.defer_fn(function()
-        if requested and requested == list_item(buf) then
+        local row = list_row(buf)
+        if requested and row and same_row(requested, row) then
           preview_current()
         end
       end, cfg.preview_debounce_ms)
     end,
   })
 
-  map(buf, cfg.keymaps.list, {
-    open = function()
-      local e = list_item(buf)
-      if not e then
+  local function targets()
+    local selected = vim.tbl_filter(function(e)
+      return e.selected
+    end, state[buf].items)
+    if #selected > 0 then
+      return selected, true
+    end
+    local e = list_item(buf)
+    return e and { e } or {}, false
+  end
+
+  local function queue(kind)
+    local entries, from_selection = targets()
+    if #entries > cfg.ai.confirm_over then
+      if vim.fn.confirm(("Queue %d entries for AI?"):format(#entries), "&Yes\n&No", 2) ~= 1 then
         return
       end
-      if not e.read then
-        set_read(e, true)
+    end
+    local queued = 0
+    for _, e in ipairs(entries) do
+      if ai.enqueue(kind, e, ai_source) then
+        queued = queued + 1
+      end
+    end
+    if from_selection then
+      for _, e in ipairs(entries) do
+        e.selected = nil
+      end
+    end
+    redraw(buf)
+    vim.notify(("folo: queued %d, skipped %d already done or running"):format(queued, #entries - queued))
+  end
+
+  map(buf, cfg.keymaps.list, {
+    summarize = function()
+      queue("summary")
+    end,
+    translate = function()
+      queue("translation")
+    end,
+    delete_summary = function()
+      local e = list_item(buf)
+      if not e or not ai.info(e.id).visible then
+        return
+      end
+      if vim.fn.confirm("Delete this summary?", "&Yes\n&No", 2) ~= 1 then
+        return
+      end
+      if not ai.remove(e.id) then
+        vim.notify("folo: wait for the running AI job to finish")
+      end
+    end,
+    open = function()
+      local row = list_row(buf)
+      if not row then
+        return
+      end
+      if not row.entry.read then
+        set_read(row.entry, true)
       end
       preview.list = buf
-      if preview.entry ~= e then
-        show_preview(e)
-      end
+      show_row(row)
+      close_help()
       vim.api.nvim_set_current_win(ensure_preview_win(cfg))
     end,
     toggle_select = function()
@@ -426,9 +718,14 @@ function M.timeline(opts, title)
       end
       e.selected = not e.selected or nil
       redraw(buf)
-      local row = vim.api.nvim_win_get_cursor(0)[1]
-      if row < vim.api.nvim_buf_line_count(buf) then
-        vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
+      -- Child rows belong to their entry, so the next stop is the next entry.
+      local rows = state[buf].rows
+      local row = vim.api.nvim_win_get_cursor(0)[1] + 1
+      while rows[row] and rows[row].child do
+        row = row + 1
+      end
+      if rows[row] then
+        vim.api.nvim_win_set_cursor(0, { row, 0 })
       end
     end,
     toggle_read = function()
@@ -466,11 +763,16 @@ function M.timeline(opts, title)
     end,
     refresh = function()
       state[buf].items = {}
+      state[buf].rows = {}
       state[buf].next = nil
       preview.entry = nil
       load_page(nil)
     end,
+    help = function()
+      toggle_help("list")
+    end,
     close = function()
+      close_help()
       local win = preview_win()
       if win and #vim.api.nvim_tabpage_list_wins(0) > 1 then
         vim.api.nvim_win_close(win, true)

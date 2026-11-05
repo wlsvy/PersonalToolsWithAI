@@ -18,6 +18,7 @@ folo.setup({
   preview_debounce_ms = 10,
   open_confirm_over = 2,
   article = { browser_cmd = { dir .. "/fake_browser.sh" }, thin_chars = 20 },
+  ai = { dir = vim.fn.tempname() },
 })
 
 local function eq(got, want)
@@ -288,6 +289,42 @@ wait_preview("Could not load article")
 ui_cli.timeline = original
 folo.config.article.auto_fetch = true
 
+-- ? toggles a help popup that never takes focus and follows the live keymaps.
+local function help_text()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_config(win).relative ~= "" then
+      return table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false), "\n"), win
+    end
+  end
+end
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+local help_list_win = vim.api.nvim_get_current_win()
+eq(help_text(), nil)
+folo.config.keymaps.list.refresh = "gR"
+folo.config.keymaps.list.toggle_read = false
+press("?")
+local text, float = help_text()
+assert(text:find("<Tab>", 1, true) and text:find("gR", 1, true), text)
+assert(not text:find("Toggle read", 1, true), text)
+assert(text:find("+ selected", 1, true), text)
+eq(vim.api.nvim_get_current_win(), help_list_win)
+eq(vim.api.nvim_win_get_config(float).focusable, false)
+folo.config.keymaps.list.refresh = "r"
+folo.config.keymaps.list.toggle_read = "m"
+press("?")
+eq(help_text(), nil)
+
+-- Moving to the preview closes it; ? there shows the preview's keys; q closes it again.
+press("?")
+press("<CR>")
+eq(help_text(), nil)
+press("?")
+text = help_text()
+assert(text:find("headless browser", 1, true) and not text:find("<Tab>", 1, true), text)
+press("q")
+eq(help_text(), nil)
+eq(vim.api.nvim_get_current_win(), help_list_win)
+
 -- Opening more pages than the limit asks first; declining keeps the selection.
 ui_cli.timeline = function(_, cb)
   local entries = {}
@@ -316,9 +353,9 @@ press("gx")
 eq(opened, { "https://x/c1", "https://x/c2", "https://x/c3" })
 eq(vim.api.nvim_buf_get_lines(many, 0, 1, false)[1]:sub(1, 1), " ")
 
--- List q closes both windows' view.
-local before = #vim.api.nvim_tabpage_list_wins(0)
-eq(before, 2)
+-- List q closes both windows' view and an open help popup.
+press("?")
+eq(#vim.api.nvim_tabpage_list_wins(0), 3)
 press("q")
 eq(#vim.api.nvim_tabpage_list_wins(0), 1)
 
