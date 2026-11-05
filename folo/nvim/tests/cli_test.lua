@@ -142,4 +142,73 @@ assert(vim.wait(3000, function()
 end), "entry buffer did not open")
 eq(vim.api.nvim_buf_get_lines(0, -2, -1, false), { "readable" })
 
+-- R replaces the body and keeps the header; nothing extracted keeps the body.
+local function open_entry(id)
+  require("folo.ui").entry(id)
+  assert(vim.wait(3000, function()
+    return vim.api.nvim_buf_get_name(0) == "folo://entry/" .. id
+  end), "entry " .. id .. " did not open")
+end
+local function last_line()
+  return vim.api.nvim_buf_get_lines(0, -2, -1, false)[1]
+end
+open_entry("1")
+eq(last_line(), "body")
+press("R")
+assert(vim.wait(3000, function()
+  return last_line() == "full article"
+end), "readability did not replace body: " .. last_line())
+eq(vim.api.nvim_buf_get_lines(0, 0, 1, false), { "# first" })
+
+open_entry("3")
+press("R")
+vim.wait(300)
+eq(last_line(), "short")
+
+-- Categories: unique, sorted, nulls dropped; picking opens that category.
+local names
+err, names = await(function(cb)
+  cli.categories(cb)
+end)
+eq({ err, names }, { nil, { "AI", "News" } })
+
+local offered
+vim.ui.select = function(items, _, on_choice)
+  offered = items
+  on_choice("News")
+end
+vim.cmd("FoloCategory")
+assert(vim.wait(3000, function()
+  return vim.api.nvim_buf_get_name(0) == "folo://timeline/category/News"
+end), "picked category did not open")
+eq(offered, { "AI", "News" })
+assert(vim.wait(3000, function()
+  return (vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""):find("news item", 1, true) ~= nil
+end), "category entries did not load")
+eq(last_args(), "--format json timeline --category News")
+
+-- A name that is a prefix of an open category gets its own buffer.
+vim.cmd("FoloCategory New")
+eq(vim.api.nvim_buf_get_name(0), "folo://timeline/category/New")
+eq(vim.tbl_contains(vim.tbl_map(vim.api.nvim_buf_get_name, vim.api.nvim_list_bufs()), "folo://timeline/category/News"), true)
+
+-- Dismissing the picker opens nothing.
+local before = vim.api.nvim_get_current_buf()
+vim.ui.select = function(_, _, on_choice)
+  on_choice(nil)
+  offered = "dismissed"
+end
+vim.cmd("FoloCategory")
+assert(vim.wait(3000, function()
+  return offered == "dismissed"
+end))
+eq(vim.api.nvim_get_current_buf(), before)
+
+vim.cmd("FoloStarred")
+eq(vim.api.nvim_buf_get_name(0), "folo://timeline/starred")
+assert(vim.wait(3000, function()
+  return (vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""):find("saved", 1, true) ~= nil
+end), "starred entries did not load")
+eq(last_args(), "--format json collection list")
+
 print("ok")

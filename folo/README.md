@@ -16,14 +16,20 @@ folo login
 ```lua
 -- lazy.nvim 예시
 { dir = "~/Desktop/Workspace/PersonalToolsWithAI/folo/nvim", name = "folo", main = "folo",
-  cmd = { "Folo", "FoloUnread" }, opts = {} }
+  cmd = { "Folo", "FoloUnread", "FoloCategory", "FoloStarred" }, opts = {} }
 ```
 
 전역 설치 없이 쓰려면 `opts = { cmd = { "npx", "--yes", "folocli@0.0.5" } }`로 지정합니다. 이 방식은 실행할 때마다 더 느릴 수 있습니다.
 
 ## 사용
 
-명령은 `:Folo`, `:FoloUnread`입니다.
+| 명령 | 동작 |
+|---|---|
+| `:Folo` | 전체 타임라인을 엽니다. |
+| `:FoloUnread` | 안 읽은 글을 엽니다. |
+| `:FoloCategory` | 내 카테고리 목록에서 골라 엽니다. |
+| `:FoloCategory <이름>` | 해당 카테고리를 바로 엽니다. |
+| `:FoloStarred` | 컬렉션에 저장한 글을 엽니다. |
 
 | 키 | 동작 |
 |---|---|
@@ -33,6 +39,7 @@ folo login
 | `]p` | 다음 페이지를 불러옵니다. |
 | `r` | 목록을 새로 불러옵니다. |
 | `q` | 버퍼를 닫습니다. |
+| `R` | 본문 화면에서 원문 추출 본문으로 바꿉니다. 링크만 있는 피드에 유용합니다. |
 
 본문 변환에는 pandoc을 쓰고, 없으면 태그만 제거합니다.
 

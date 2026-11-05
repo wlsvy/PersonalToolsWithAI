@@ -10,10 +10,19 @@ local function notify_err(err)
   vim.notify("folo: " .. err, vim.log.levels.ERROR)
 end
 
+-- bufnr() would treat a user-supplied category as a pattern and match it partially.
+local function find_buf(name)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf) == name then
+      return buf
+    end
+  end
+end
+
 -- Open (or reuse) a scratch buffer named `name` in the current window.
 local function scratch(name, filetype)
-  local buf = vim.fn.bufnr(name)
-  if buf == -1 then
+  local buf = find_buf(name)
+  if not buf then
     buf = vim.api.nvim_create_buf(true, true)
     vim.api.nvim_buf_set_name(buf, name)
     vim.bo[buf].buftype = "nofile"
@@ -62,7 +71,7 @@ local function redraw(buf)
   set_lines(buf, #lines > 0 and lines or { "(no entries)" })
 end
 
--- opts: {unread=}; title names the buffer.
+-- opts: {unread=, category=, collection=}; title names the buffer.
 function M.timeline(opts, title)
   local cfg = require("folo").get_config()
   local buf = scratch("folo://timeline/" .. title, "folo-timeline")
@@ -74,7 +83,7 @@ function M.timeline(opts, title)
       return
     end
     s.loading = true
-    cli.timeline({ unread = opts.unread, cursor = cursor }, function(err, page)
+    local function on_page(err, page)
       s.loading = false
       if err then
         return notify_err(err)
@@ -85,7 +94,12 @@ function M.timeline(opts, title)
       vim.list_extend(s.items, page.entries)
       s.next = page.next
       redraw(buf)
-    end)
+    end
+    if opts.collection then
+      cli.collection({ cursor = cursor }, on_page)
+    else
+      cli.timeline({ unread = opts.unread, category = opts.category, cursor = cursor }, on_page)
+    end
   end
 
   local function current()
@@ -145,6 +159,36 @@ function M.timeline(opts, title)
   load_page(nil)
 end
 
+function M.category(name)
+  M.timeline({ category = name }, "category/" .. name)
+end
+
+-- Lists the account's categories so names need not be remembered.
+function M.pick_category()
+  cli.categories(function(err, names)
+    if err then
+      return notify_err(err)
+    end
+    if #names == 0 then
+      return vim.notify("folo: no categories")
+    end
+    vim.ui.select(names, { prompt = "Folo category" }, function(name)
+      if name then
+        M.category(name)
+      end
+    end)
+  end)
+end
+
+function M.starred()
+  M.timeline({ collection = true }, "starred")
+end
+
+local function show_entry(buf, e, body)
+  local lines = { "# " .. one_line(e.title), "", e.url, e.feed .. "  " .. e.published, "" }
+  set_lines(buf, vim.list_extend(lines, body))
+end
+
 function M.entry(id)
   local cfg = require("folo").get_config()
   cli.entry(id, function(err, e)
@@ -154,9 +198,24 @@ function M.entry(id)
     render.to_lines(e.content or "", cfg.render, function(body)
       local buf = scratch("folo://entry/" .. id, "markdown")
       state[buf] = { items = {}, entry = e }
-      local lines = { "# " .. one_line(e.title), "", e.url, e.feed .. "  " .. e.published, "" }
-      set_lines(buf, vim.list_extend(lines, body))
+      show_entry(buf, e, body)
       map(buf, cfg.keymaps.entry, {
+        -- Replaces a link-only feed body; on failure the current body stays.
+        readability = function()
+          cli.readability(id, function(read_err, content)
+            if read_err then
+              return notify_err(read_err)
+            end
+            if content == "" then
+              return vim.notify("folo: no readable content")
+            end
+            render.to_lines(content, cfg.render, function(full)
+              if vim.api.nvim_buf_is_valid(buf) then
+                show_entry(buf, e, full)
+              end
+            end)
+          end)
+        end,
         open_url = function()
           if e.url ~= "" then
             vim.ui.open(e.url)

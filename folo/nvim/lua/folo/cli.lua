@@ -61,21 +61,13 @@ local function normalize(item)
   }
 end
 
--- timeline({unread=, cursor=}, cb(err, {entries=, next=}))
-function M.timeline(opts, cb)
-  local cfg = require("folo").get_config()
-  local args = { "timeline" }
-  local function flag(name, value)
-    if value ~= nil then
-      vim.list_extend(args, { name, tostring(value) })
-    end
+local function add_flag(args, name, value)
+  if value ~= nil then
+    vim.list_extend(args, { name, tostring(value) })
   end
-  flag("--view", cfg.view)
-  flag("--limit", cfg.page_size)
-  flag("--cursor", opts.cursor)
-  if opts.unread then
-    table.insert(args, "--unread-only")
-  end
+end
+
+local function list_page(args, cb)
   M.run(args, function(err, data)
     if err then
       return cb(err)
@@ -85,6 +77,60 @@ function M.timeline(opts, cb)
       table.insert(entries, normalize(item))
     end
     cb(nil, { entries = entries, next = data.hasNext and data.nextCursor or nil })
+  end)
+end
+
+-- timeline({unread=, category=, cursor=}, cb(err, {entries=, next=}))
+function M.timeline(opts, cb)
+  local cfg = require("folo").get_config()
+  local args = { "timeline" }
+  add_flag(args, "--view", cfg.view)
+  add_flag(args, "--limit", cfg.page_size)
+  add_flag(args, "--category", opts.category)
+  add_flag(args, "--cursor", opts.cursor)
+  if opts.unread then
+    table.insert(args, "--unread-only")
+  end
+  list_page(args, cb)
+end
+
+-- collection({cursor=}, cb(err, {entries=, next=}))
+function M.collection(opts, cb)
+  local cfg = require("folo").get_config()
+  local args = { "collection", "list" }
+  add_flag(args, "--limit", cfg.page_size)
+  add_flag(args, "--cursor", opts.cursor)
+  list_page(args, cb)
+end
+
+-- categories(cb(err, names)): sorted unique category names of the subscriptions.
+function M.categories(cb)
+  local cfg = require("folo").get_config()
+  local args = { "subscription", "list" }
+  add_flag(args, "--view", cfg.view)
+  M.run(args, function(err, data)
+    if err then
+      return cb(err)
+    end
+    local seen = {}
+    for _, sub in ipairs(data.subscriptions or {}) do
+      if sub.category and sub.category ~= "" then
+        seen[sub.category] = true
+      end
+    end
+    local names = vim.tbl_keys(seen)
+    table.sort(names)
+    cb(nil, names)
+  end)
+end
+
+-- readability(id, cb(err, content)); content is "" when nothing could be extracted.
+function M.readability(id, cb)
+  M.run({ "entry", "read", id }, function(err, data)
+    if err then
+      return cb(err)
+    end
+    cb(nil, data and data.content or "")
   end)
 end
 
@@ -101,11 +147,11 @@ function M.entry(id, cb)
     if e.content and e.content ~= "" then
       return cb(nil, e)
     end
-    M.run({ "entry", "read", id }, function(read_err, readable)
+    M.readability(id, function(read_err, content)
       if read_err then
         return cb(read_err)
       end
-      e.content = readable and readable.content or ""
+      e.content = content
       cb(nil, e)
     end)
   end)

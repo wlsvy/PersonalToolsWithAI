@@ -10,6 +10,12 @@ case "$FAKE_FOLO_MODE" in
   slow) exec sleep 5 ;;
 esac
 case "$*" in
+  *"subscription list"*)
+    echo '{"ok":true,"data":{"subscriptions":[{"category":"News"},{"category":"AI"},{"category":null},{"category":"AI"},{}]},"error":null}' ;;
+  *"collection list"*)
+    echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":"F3"},"entries":{"id":"9","title":"saved","url":"https://x/9","publishedAt":"2026-02-01T00:00:00Z"}}],"nextCursor":"2026-02-01T00:00:00Z","hasNext":false},"error":null}' ;;
+  *"--category News"*)
+    echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F4"},"entries":{"id":"7","title":"news item","url":"https://x/7","publishedAt":"2026-03-01T00:00:00Z"}}],"nextCursor":"2026-03-01T00:00:00Z","hasNext":false},"error":null}' ;;
   *"timeline"*"--cursor 2026-01-01"*)
     echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":"F2"},"entries":{"id":"3","title":"third","url":"https://x/3","publishedAt":"2025-12-31T00:00:00Z"}}],"nextCursor":"2025-12-31T00:00:00Z","hasNext":false},"error":null}' ;;
   *timeline*)
@@ -18,6 +24,10 @@ case "$*" in
     echo '{"ok":true,"data":{"feeds":{"title":"F1"},"entries":{"id":"1","title":"first","url":"https://x/1","content":"<p>body</p>","publishedAt":"2026-01-02T00:00:00Z"}},"error":null}' ;;
   *"entry get 2"*)
     echo '{"ok":true,"data":{"feeds":{"title":"F1"},"entries":{"id":"2","title":"second","url":"https://x/2","content":null}},"error":null}' ;;
+  *"entry get 3"*)
+    echo '{"ok":true,"data":{"feeds":{"title":"F1"},"entries":{"id":"3","title":"third","url":"https://x/3","content":"<p>short</p>"}},"error":null}' ;;
+  *"entry read 1"*) echo '{"ok":true,"data":{"content":"<p>full article</p>"},"error":null}' ;;
+  *"entry read 3"*) echo '{"ok":true,"data":null,"error":null}' ;;
   *"entry get 404"*) echo '{"ok":true,"data":null,"error":null}' ;;
   *"entry read 2"*) echo '{"ok":true,"data":{"content":"<p>readable</p>"},"error":null}' ;;
   *"entry mark-"*) echo '{"ok":true,"data":null,"error":null}' ;;

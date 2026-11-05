@@ -9,7 +9,7 @@ local defaults = {
   render = "auto", -- "auto" | "pandoc" | "strip"
   keymaps = {
     timeline = { open = "<CR>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q" },
-    entry = { open_url = "gx", close = "q" },
+    entry = { open_url = "gx", readability = "R", close = "q" },
   },
 }
 

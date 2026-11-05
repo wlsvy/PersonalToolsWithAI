@@ -27,6 +27,9 @@ folo/
 - `entry get <id>` -> `{feeds,entries:{...,content}}` or null.
 - `entry read <id>` -> `{content}` or null (readability).
 - `entry mark-read <id>`, `entry mark-unread <id>`.
+- `timeline --category <name>`: exact, case-sensitive match; unknown name returns an empty list.
+- `collection list [--limit] [--cursor]` -> same shape as `timeline`.
+- `subscription list [--view] [--category]` -> `{subscriptions:[{category,...}]}`; `category` may be null.
 
 ## Config
 ```lua
@@ -38,7 +41,7 @@ folo/
   render = "auto",         -- "auto" | "pandoc" | "strip"
   keymaps = {
     timeline = { open = "<CR>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q" },
-    entry = { open_url = "gx", close = "q" },
+    entry = { open_url = "gx", readability = "R", close = "q" },
   },
 }
 ```
@@ -52,7 +55,7 @@ folo/
 - Entry field names mapped in one normalize function in `cli.lua`; UI never reads raw CLI fields.
 
 ## Commands
-`:Folo` (timeline), `:FoloUnread` (`--unread-only`).
+`:Folo` (timeline), `:FoloUnread` (`--unread-only`), `:FoloCategory [name]` (no argument: `vim.ui.select` over categories from `subscription list`), `:FoloStarred` (`collection list`).
 
 ## UI rules
 - Follow `rss/nvim-sample/lua/rss_sample/ui.lua` patterns (scratch buffers, buffer-local keymaps, `vim.ui.open`); reimplement, no shared module.
@@ -60,19 +63,21 @@ folo/
 - Next page: append with `nextCursor`; no-op with notice when `hasNext` is false.
 - Opening an entry marks read (matches sample); failure shows the error but keeps content.
 - Empty `entry get` content falls back to `entry read`.
+- `R` in an entry buffer runs `entry read`; replaces the body, keeps the header; empty result or failure keeps the current body. Never automatic.
+- Buffer lookup is an exact name match (`bufnr()` matches partially).
 - One page request at a time per buffer; `r` reloads from the first page.
 
 ## Out of scope
-Subscriptions, collections, OPML, search, mark-all-read, sync with `rss/server`, direct HTTP to `api.folo.is`, copying Folo code (AGPL).
+Subscription management, collection add/remove, OPML, search, mark-all-read, sync with `rss/server`, direct HTTP to `api.folo.is`, copying Folo code (AGPL).
 
 ## Personal config
-`~/.config/nvim/lua/plugins/folo.lua`: `dir` to `folo/nvim`, `cmd = { 'Folo', 'FoloUnread' }`.
+`~/.config/nvim/lua/plugins/folo.lua`: `dir` to `folo/nvim`, `cmd = { 'Folo', 'FoloUnread', 'FoloCategory', 'FoloStarred' }`.
 
 ## Verify
 ```sh
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/cli_test.lua   # -> ok
 ```
-- Test covers: parsing, read fallback, argv (no `--token`), UNAUTHORIZED, non-zero exit, invalid JSON, timeout, missing executable, UI list/toggle/paging/entry.
+- Test covers: parsing, read fallback, argv (no `--token`), UNAUTHORIZED, non-zero exit, invalid JSON, timeout, missing executable, UI list/toggle/paging/entry, `R` replace and empty result, category picker/dismiss/prefix names, starred.
 - Manual, run by the user because the sandbox denies `~/.folo` and other home paths: `:Folo`, open entry, `m`, `]p`, `gx`.
 
 ## Extensibility decisions (confirmed)
