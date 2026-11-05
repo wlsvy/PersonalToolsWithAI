@@ -1,0 +1,81 @@
+# Folo nvim plugin (AI)
+
+요약: [nvim.md](nvim.md)
+
+Status: implemented.
+
+## Files
+```
+folo/
+  README.md
+  docs/nvim.md, nvim.ai.md
+  nvim/
+    plugin/folo.lua      user commands only, lazy-require
+    lua/folo/init.lua    setup(opts), config merge
+    lua/folo/cli.lua     only module that knows CLI args and the JSON envelope
+    lua/folo/ui.lua      timeline + entry buffers, keymaps
+    lua/folo/render.lua  html -> text; own copy of the sample's module, not shared
+    tests/cli_test.lua   headless self-check using tests/fake_folo.sh
+    tests/fake_folo.sh   fixture CLI: prints envelopes, failures, invalid JSON
+```
+
+## Upstream contract (read from folocli 0.0.5 source and client-sdk 0.3.95 types; not yet run with a real account)
+- Global options: `--format json|table|plain` (default json), `--token`, `--api-url`, `--verbose`. Plugin passes `--format json` and never `--token`.
+- Token order: `--token`, `FOLO_TOKEN`, stored config.
+- Success: stdout `{ok:true,data,error:null}`. Failure: **stderr** `{ok:false,data:null,error:{code,message}}`, exit 1.
+- `timeline [--view] [--limit] [--unread-only] [--cursor]` -> `{entries:[{read,view,from,feeds,entries:{id,title,url,author,publishedAt,...}}],nextCursor,hasNext}`; default limit 20.
+- `entry get <id>` -> `{feeds,entries:{...,content}}` or null.
+- `entry read <id>` -> `{content}` or null (readability).
+- `entry mark-read <id>`, `entry mark-unread <id>`.
+
+## Config
+```lua
+{
+  cmd = { "folo" },        -- argv prefix; pending extensibility decision 1
+  view = nil,              -- nil = CLI default
+  page_size = nil,         -- nil = CLI default
+  timeout_ms = 30000,
+  render = "auto",         -- "auto" | "pandoc" | "strip"
+  keymaps = {
+    timeline = { open = "<CR>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q" },
+    entry = { open_url = "gx", close = "q" },
+  },
+}
+```
+
+## CLI layer contract
+- `M.run(args, cb(err, data))`: `vim.system(vim.list_extend(cmd, args), { text = true, timeout = timeout_ms })`; schedule cb on main loop.
+- Never pass `--token`; child inherits env (`FOLO_TOKEN`) or CLI stored login.
+- Errors, all routed to `err`: missing executable (install hint), timeout (`vim.system` code 124), non-zero exit, invalid JSON, `ok == false`. `UNAUTHORIZED` → hint to run login in a terminal.
+- Parse stdout, or stderr when stdout is empty.
+- Pass IDs and cursors as separate argv items; no shell.
+- Entry field names mapped in one normalize function in `cli.lua`; UI never reads raw CLI fields.
+
+## Commands
+`:Folo` (timeline), `:FoloUnread` (`--unread-only`).
+
+## UI rules
+- Follow `rss/nvim-sample/lua/rss_sample/ui.lua` patterns (scratch buffers, buffer-local keymaps, `vim.ui.open`); reimplement, no shared module.
+- Toggle read: update UI only after CLI success.
+- Next page: append with `nextCursor`; no-op with notice when `hasNext` is false.
+- Opening an entry marks read (matches sample); failure shows the error but keeps content.
+- Empty `entry get` content falls back to `entry read`.
+- One page request at a time per buffer; `r` reloads from the first page.
+
+## Out of scope
+Subscriptions, collections, OPML, search, mark-all-read, sync with `rss/server`, direct HTTP to `api.folo.is`, copying Folo code (AGPL).
+
+## Personal config
+`~/.config/nvim/lua/plugins/folo.lua`: `dir` to `folo/nvim`, `cmd = { 'Folo', 'FoloUnread' }`.
+
+## Verify
+```sh
+nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/cli_test.lua   # -> ok
+```
+- Test covers: parsing, read fallback, argv (no `--token`), UNAUTHORIZED, non-zero exit, invalid JSON, timeout, missing executable, UI list/toggle/paging/entry.
+- Manual, run by the user because the sandbox denies `~/.folo` and other home paths: `:Folo`, open entry, `m`, `]p`, `gx`.
+
+## Extensibility decisions (confirmed)
+1. CLI execution: default `{ "folo" }` (global install), `cmd` configurable; no `@latest`.
+2. Accounts: single account.
+3. Backend: UI depends only on `cli.lua`; no multi-backend interface.
