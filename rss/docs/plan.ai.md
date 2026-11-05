@@ -12,7 +12,7 @@ rss/
   docs/     plan, api, config, server, app, nvim (.md + .ai.md each)
   server/   Go module `rss-server` (go.mod already initialized; deps gofeed, modernc sqlite added)
   web/      TypeScript PWA
-  nvim/     Lua plugin
+  nvim-sample/  Lua plugin (learning sample, renamed from nvim/)
   README.md run instructions
 ```
 

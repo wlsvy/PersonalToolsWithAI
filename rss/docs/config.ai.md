@@ -37,7 +37,7 @@ Single source of truth for every tunable. Code reads config only through `intern
 | `serverUrl` | localStorage | empty = same origin (default, since Go serves the app) |
 | `token` | localStorage | XSS mitigated by server sanitize + CSP |
 
-## nvim (`require("rss").setup{}`)
+## nvim (`require("rss_sample").setup{}`)
 | Opt | Default | Fallback |
 |---|---|---|
 | `url` | – | env `RSS_URL` |

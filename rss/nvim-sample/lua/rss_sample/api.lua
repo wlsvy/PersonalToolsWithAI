@@ -19,7 +19,7 @@ end
 
 -- request(method, path, {query=, body=}, cb(err, data)); cb runs on the main loop.
 function M.request(method, path, opts, cb)
-  local cfg = require("rss").get_config()
+  local cfg = require("rss_sample").get_config()
   if not cfg then
     return
   end

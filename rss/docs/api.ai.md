@@ -2,7 +2,7 @@
 
 요약: [api.md](api.md)
 
-Single source of truth for the contract. Server (`internal/api`) and every client (nvim `lua/rss/api.lua`, app API service) must match this file; change here first.
+Single source of truth for the contract. Server (`internal/api`) and every client (nvim `lua/rss_sample/api.lua`, app API service) must match this file; change here first.
 
 ## Conventions
 - Base path `/api/v1`. Breaking changes → `/api/v2`, keep v1 until clients migrate.

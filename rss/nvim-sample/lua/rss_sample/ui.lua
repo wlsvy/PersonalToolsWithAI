@@ -1,5 +1,5 @@
-local api = require("rss.api")
-local render = require("rss.render")
+local api = require("rss_sample.api")
+local render = require("rss_sample.render")
 
 local M = {}
 
@@ -7,7 +7,7 @@ local M = {}
 local state = {}
 
 local function notify_err(err)
-  vim.notify("rss: " .. err, vim.log.levels.ERROR)
+  vim.notify("rss_sample: " .. err, vim.log.levels.ERROR)
 end
 
 -- Open (or reuse) a scratch buffer named `name` in the current window.
@@ -40,7 +40,7 @@ end
 local function map(buf, keys, actions)
   for name, fn in pairs(actions) do
     if keys[name] then
-      vim.keymap.set("n", keys[name], fn, { buffer = buf, nowait = true, desc = "rss: " .. name })
+      vim.keymap.set("n", keys[name], fn, { buffer = buf, nowait = true, desc = "rss_sample: " .. name })
     end
   end
 end
@@ -64,11 +64,11 @@ local function feed_line(f)
 end
 
 function M.feeds()
-  local cfg = require("rss").get_config()
+  local cfg = require("rss_sample").get_config()
   if not cfg then
     return
   end
-  local buf = scratch("rss://feeds", "rss-feeds")
+  local buf = scratch("rss_sample://feeds", "rss_sample-feeds")
   local function load()
     api.feeds(function(err, feeds)
       if err then
@@ -129,11 +129,11 @@ end
 
 -- params: API query for /entries (feed, unread, starred); title names the buffer.
 function M.entries(params, title)
-  local cfg = require("rss").get_config()
+  local cfg = require("rss_sample").get_config()
   if not cfg then
     return
   end
-  local buf = scratch("rss://entries/" .. title, "rss-entries")
+  local buf = scratch("rss_sample://entries/" .. title, "rss_sample-entries")
   state[buf] = { items = {}, next = nil, params = params }
 
   local function load_page(before)
@@ -195,7 +195,7 @@ function M.entries(params, title)
       if s.next then
         load_page(s.next)
       else
-        vim.notify("rss: no more entries")
+        vim.notify("rss_sample: no more entries")
       end
     end,
     close = close,
@@ -206,7 +206,7 @@ end
 -- Entry -----------------------------------------------------------------
 
 function M.entry(id)
-  local cfg = require("rss").get_config()
+  local cfg = require("rss_sample").get_config()
   if not cfg then
     return
   end
@@ -215,7 +215,7 @@ function M.entry(id)
       return notify_err(err)
     end
     render.to_lines(e.content or "", cfg.render, function(body)
-      local buf = scratch("rss://entry/" .. id, "markdown")
+      local buf = scratch("rss_sample://entry/" .. id, "markdown")
       state[buf] = { items = {}, entry = e }
       local lines = { "# " .. e.title, "", e.url, os.date("%Y-%m-%d %H:%M", e.published), "" }
       set_lines(buf, vim.list_extend(lines, body))
@@ -238,7 +238,7 @@ function M.add(url)
     if err then
       return notify_err(err)
     end
-    vim.notify(("rss: added %s (%d entries)%s"):format(f.title ~= "" and f.title or f.url, f.unread,
+    vim.notify(("rss_sample: added %s (%d entries)%s"):format(f.title ~= "" and f.title or f.url, f.unread,
       f.error ~= "" and (", fetch error: " .. f.error) or ""))
   end)
 end
@@ -249,7 +249,7 @@ function M.refresh(feed_id)
     if err then
       return notify_err(err)
     end
-    vim.notify("rss: refreshed")
+    vim.notify("rss_sample: refreshed")
   end
   if feed_id then
     return api.refresh_feed(feed_id, done)

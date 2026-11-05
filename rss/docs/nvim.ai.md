@@ -1,15 +1,15 @@
-# nvim plugin (AI)
+# nvim sample plugin (AI)
 
 요약: [nvim.md](nvim.md)
 
 ## Files
 ```
-nvim/
-  plugin/rss.lua        user commands only, lazy-require
-  lua/rss/init.lua      setup(opts), config merge (opts > env RSS_URL/RSS_TOKEN)
-  lua/rss/api.lua       curl via vim.system (async), vim.json.decode; one function per API v1 endpoint
-  lua/rss/ui.lua        buffers: feeds, entries, entry; keymaps
-  lua/rss/render.lua    html → text: pandoc if executable, else tag strip
+nvim-sample/
+  plugin/rss_sample.lua user commands only, lazy-require
+  lua/rss_sample/init.lua      setup(opts), config merge (opts > env RSS_URL/RSS_TOKEN)
+  lua/rss_sample/api.lua       curl via vim.system (async), vim.json.decode; one function per API v1 endpoint
+  lua/rss_sample/ui.lua        buffers: feeds, entries, entry; keymaps
+  lua/rss_sample/render.lua    html → text: pandoc if executable, else tag strip
   tests/render_test.lua strip() self-check (no server needed)
 ```
 - api.lua is the only module that knows URLs/paths; base path `/api/v1` from config.
@@ -17,7 +17,7 @@ nvim/
 - External deps: `curl` required, `pandoc` optional.
 
 ## Commands
-`:Rss` (feeds), `:RssUnread` (unread entries), `:RssAdd <url>`, `:RssRefresh [feedId]`.
+`:RssSample` (feeds), `:RssSampleUnread` (unread entries), `:RssSampleAdd <url>`, `:RssSampleRefresh [feedId]`.
 
 ## Keymaps (buffer-local)
 - feeds: `<CR>` open entries, `r` refresh, `dd` delete (confirm), `q` close
@@ -29,5 +29,5 @@ nvim/
 - `pandoc -f html -t gfm-raw_html --wrap=none` (drops leftover tags); fallback strips tags (`shortcut:` comment: no tables/links, install pandoc to upgrade).
 
 ## Verify
-- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -l rss/nvim/tests/render_test.lua` → `ok`
-- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -c "lua require('rss').setup{url='http://localhost:8080',token='dev'}" -c Rss -c q` without errors; manual walkthrough against local server.
+- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim-sample" -l rss/nvim-sample/tests/render_test.lua` → `ok`
+- `nvim --headless -u NONE --cmd "set rtp+=rss/nvim-sample" -c "lua require('rss_sample').setup{url='http://localhost:8080',token='dev'}" -c RssSample -c q` without errors; manual walkthrough against local server.

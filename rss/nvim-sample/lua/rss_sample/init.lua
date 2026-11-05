@@ -33,7 +33,7 @@ function M.get_config()
     M.setup()
   end
   if not M.config.url or not M.config.token then
-    vim.notify("rss: set url and token via require('rss').setup{} or RSS_URL/RSS_TOKEN", vim.log.levels.ERROR)
+    vim.notify("rss_sample: set url and token via require('rss_sample').setup{} or RSS_URL/RSS_TOKEN", vim.log.levels.ERROR)
     return nil
   end
   return M.config

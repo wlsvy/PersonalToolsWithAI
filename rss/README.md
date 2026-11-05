@@ -1,6 +1,6 @@
 # RSS 리더
 
-셀프호스트 RSS 서버(Go)와 웹앱(Vue PWA), nvim 플러그인입니다. 설계는 [docs/plan.md](docs/plan.md)에 있습니다.
+셀프호스트 RSS 서버(Go)와 웹앱(Vue PWA), 학습용 nvim 샘플 플러그인입니다. 설계는 [docs/plan.md](docs/plan.md)에 있습니다.
 
 ## 서버 + 웹앱 실행
 
@@ -21,16 +21,16 @@ tailscale serve --bg 8080
 
 폰에서 `https://<mac 이름>.<tailnet>.ts.net`을 열고 홈 화면에 추가합니다.
 
-## nvim
+## nvim (학습용 샘플)
 
 ```lua
 -- lazy.nvim 예시
-{ dir = "~/Desktop/Workspace/PersonalToolsWithAI/rss/nvim", config = function()
-  require("rss").setup({ url = "http://127.0.0.1:8080", token = vim.env.RSS_TOKEN })
+{ dir = "~/Desktop/Workspace/PersonalToolsWithAI/rss/nvim-sample", config = function()
+  require("rss_sample").setup({ url = "http://127.0.0.1:8080", token = vim.env.RSS_TOKEN })
 end }
 ```
 
-명령은 `:Rss`, `:RssUnread`, `:RssAdd <url>`, `:RssRefresh [id]`입니다. 본문 변환에는 pandoc을 쓰고, 없으면 태그만 제거합니다.
+명령은 `:RssSample`, `:RssSampleUnread`, `:RssSampleAdd <url>`, `:RssSampleRefresh [id]`입니다. 본문 변환에는 pandoc을 쓰고, 없으면 태그만 제거합니다.
 
 ## 개발
 
@@ -38,7 +38,7 @@ end }
 cd rss/server && go test ./...
 cd rss/web && npm test && npm run typecheck
 cd rss/web && npm run dev   # /api는 RSS_DEV_SERVER(기본 127.0.0.1:8080)로 프록시합니다
-nvim --headless -u NONE --cmd "set rtp+=rss/nvim" -l rss/nvim/tests/render_test.lua
+nvim --headless -u NONE --cmd "set rtp+=rss/nvim-sample" -l rss/nvim-sample/tests/render_test.lua
 ```
 
 ## 보안 메모
