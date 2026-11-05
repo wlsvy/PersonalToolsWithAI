@@ -134,7 +134,7 @@ function M.readability(id, cb)
   end)
 end
 
--- entry(id, cb(err, entry)); falls back to readability when the feed has no content.
+-- entry(id, cb(err, entry))
 function M.entry(id, cb)
   M.run({ "entry", "get", id }, function(err, data)
     if err then
@@ -143,17 +143,7 @@ function M.entry(id, cb)
     if not data then
       return cb("entry not found: " .. id)
     end
-    local e = normalize(data)
-    if e.content and e.content ~= "" then
-      return cb(nil, e)
-    end
-    M.readability(id, function(read_err, content)
-      if read_err then
-        return cb(read_err)
-      end
-      e.content = content
-      cb(nil, e)
-    end)
+    cb(nil, normalize(data))
   end)
 end
 

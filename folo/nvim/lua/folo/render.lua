@@ -20,7 +20,7 @@ function M.to_lines(html, mode, cb)
   if not use_pandoc then
     return cb(M.strip(html))
   end
-  vim.system({ "pandoc", "-f", "html", "-t", "gfm-raw_html", "--wrap=none" }, { text = true, stdin = html }, function(res)
+  vim.system({ "pandoc", "-f", "html", "-t", "gfm-raw_html", "--wrap=none", "--sandbox" }, { text = true, stdin = html }, function(res)
     vim.schedule(function()
       if res.code ~= 0 then
         return cb(M.strip(html))

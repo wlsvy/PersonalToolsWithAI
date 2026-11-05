@@ -7,9 +7,28 @@ local defaults = {
   page_size = nil, -- nil = CLI default
   timeout_ms = 30000,
   render = "auto", -- "auto" | "pandoc" | "strip"
+  list_width = 0.4, -- fraction of the tab, or columns when >= 1
+  preview_debounce_ms = 150,
+  open_confirm_over = 10, -- confirm before opening more URLs than this
+  article = {
+    auto_fetch = true, -- false: no automatic curl; Folo readability still runs
+    thin_chars = 200, -- feed body shorter than this (text chars) triggers the fetch chain
+    curl_timeout_s = 15,
+    max_bytes = 5 * 1024 * 1024,
+    browser_cmd = nil, -- argv prefix; nil = detect Chrome/Chromium
+    browser_timeout_ms = 30000,
+  },
   keymaps = {
-    timeline = { open = "<CR>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q" },
-    entry = { open_url = "gx", readability = "R", close = "q" },
+    list = {
+      open = "<CR>",
+      toggle_select = "<Tab>",
+      toggle_read = "m",
+      open_url = "gx",
+      next_page = "]p",
+      refresh = "r",
+      close = "q",
+    },
+    preview = { open_url = "gx", browser = "R", close = "q" },
   },
 }
 
