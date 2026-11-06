@@ -182,6 +182,9 @@ local function browser_cmd(cfg)
     "google-chrome",
     "chromium",
     "chromium-browser",
+    (vim.env.ProgramFiles or "") .. "/Google/Chrome/Application/chrome.exe",
+    (vim.env.LOCALAPPDATA or "") .. "/Google/Chrome/Application/chrome.exe",
+    (vim.env["ProgramFiles(x86)"] or "") .. "/Microsoft/Edge/Application/msedge.exe",
   }
   for _, candidate in ipairs(candidates) do
     if vim.fn.executable(candidate) == 1 then

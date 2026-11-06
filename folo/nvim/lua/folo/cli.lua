@@ -29,10 +29,18 @@ local function parse(res)
   return "invalid JSON from CLI"
 end
 
+-- npm installs CLIs on Windows as `name.cmd` shims, which spawn cannot find by bare name.
+function M.resolve(cmd)
+  if vim.fn.has("win32") == 1 and vim.fn.executable(cmd[1] .. ".cmd") == 1 then
+    cmd[1] = vim.fn.exepath(cmd[1] .. ".cmd")
+  end
+  return cmd
+end
+
 -- run(args, cb(err, data)); cb runs on the main loop. The token never goes through argv.
 function M.run(args, cb)
   local cfg = require("folo").get_config()
-  local cmd = vim.list_extend(vim.deepcopy(cfg.cmd), { "--format", "json" })
+  local cmd = M.resolve(vim.list_extend(vim.deepcopy(cfg.cmd), { "--format", "json" }))
   vim.list_extend(cmd, args)
   local ok, err = pcall(vim.system, cmd, { text = true, timeout = cfg.timeout_ms }, function(res)
     vim.schedule(function()

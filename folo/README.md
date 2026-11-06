@@ -15,9 +15,18 @@ folo login
 
 ```lua
 -- lazy.nvim 예시
-{ dir = "~/Desktop/Workspace/PersonalToolsWithAI/folo/nvim", name = "folo", main = "folo",
-  cmd = { "Folo", "FoloUnread", "FoloCategory", "FoloStarred" }, opts = {} }
+-- lazy는 저장소 루트만 불러오므로 하위 폴더를 runtimepath에 직접 추가합니다.
+{ "wlsvy/PersonalToolsWithAI", name = "folo",
+  cmd = { "Folo", "FoloUnread", "FoloCategory", "FoloStarred" },
+  config = function(plugin)
+    local dir = plugin.dir .. "/folo/nvim"
+    vim.opt.rtp:append(dir)
+    vim.cmd.source(dir .. "/plugin/folo.lua")
+    require("folo").setup({})
+  end }
 ```
+
+rss 샘플도 함께 쓰면 같은 저장소 URL의 스펙은 lazy가 하나로 합치므로 스펙 하나에서 두 하위 폴더를 모두 불러와야 합니다.
 
 전역 설치 없이 쓰려면 `opts = { cmd = { "npx", "--yes", "folocli@0.0.5" } }`로 지정합니다. 이 방식은 실행할 때마다 더 느릴 수 있습니다.
 

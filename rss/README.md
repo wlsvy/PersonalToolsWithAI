@@ -25,7 +25,11 @@ tailscale serve --bg 8080
 
 ```lua
 -- lazy.nvim 예시
-{ dir = "~/Desktop/Workspace/PersonalToolsWithAI/rss/nvim-sample", config = function()
+-- lazy는 저장소 루트만 불러오므로 하위 폴더를 runtimepath에 직접 추가합니다.
+{ "wlsvy/PersonalToolsWithAI", name = "rss_sample", config = function(plugin)
+  local dir = plugin.dir .. "/rss/nvim-sample"
+  vim.opt.rtp:append(dir)
+  vim.cmd.source(dir .. "/plugin/rss_sample.lua")
   require("rss_sample").setup({ url = "http://127.0.0.1:8080", token = vim.env.RSS_TOKEN })
 end }
 ```

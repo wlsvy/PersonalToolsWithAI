@@ -111,7 +111,7 @@ local function ask(kind, source, cb)
   if vim.fn.filereadable(prompt_path) ~= 1 then
     return cb("prompt not found: " .. prompt_path)
   end
-  local cmd = vim.deepcopy(cfg.cmd)
+  local cmd = require("folo.cli").resolve(vim.deepcopy(cfg.cmd))
   vim.list_extend(cmd, {
     "-p", "--model", cfg.models[kind],
     "--system-prompt", table.concat(vim.fn.readfile(prompt_path), "\n"),
