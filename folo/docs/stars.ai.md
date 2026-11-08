@@ -7,7 +7,7 @@ Status: implemented. Test: `tests/stars_test.lua`; `article_test`/`ai_test` set 
 ## Upstream (folocli 0.0.5 dist, client-sdk types)
 - `collection add <entryId> [--view]` → `client.api.collections.post({entryId, view})`.
 - `collection remove <entryId>` → `client.api.collections.delete({entryId})`.
-- List items may carry `collections?: { createdAt }` (`EntryExtraResponse`). Not confirmed in real output.
+- List items may carry `collections?: { createdAt }` (`EntryExtraResponse`). Confirmed in real `collection list` output; it is the paging key there ([paging.ai.md](paging.ai.md)).
 
 ## cli.lua
 - `normalize`: `starred = item.collections ~= nil`.

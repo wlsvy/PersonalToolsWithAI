@@ -15,8 +15,10 @@ case "$*" in
   *"collection add 404"*)
     echo '{"ok":false,"data":null,"error":{"code":"NOT_FOUND","message":"no entry"}}' >&2; exit 1 ;;
   *"collection add"*|*"collection remove"*) echo '{"ok":true,"data":null,"error":null}' ;;
+  *"collection list"*"--cursor 2026-02-05T00:00:00Z"*)
+    echo '{"ok":true,"data":{"entries":[{"read":true,"collections":{"createdAt":"2026-02-04T00:00:00Z"},"feeds":{"title":"F3"},"entries":{"id":"10","title":"saved two","url":"https://x/10","publishedAt":"2026-03-01T00:00:00Z"}}],"nextCursor":"2026-03-01T00:00:00Z","hasNext":false},"error":null}' ;;
   *"collection list"*)
-    echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":"F3"},"entries":{"id":"9","title":"saved","url":"https://x/9","publishedAt":"2026-02-01T00:00:00Z"}}],"nextCursor":"2026-02-01T00:00:00Z","hasNext":false},"error":null}' ;;
+    echo '{"ok":true,"data":{"entries":[{"read":true,"collections":{"createdAt":"2026-02-05T00:00:00Z"},"feeds":{"title":"F3"},"entries":{"id":"9","title":"saved","url":"https://x/9","publishedAt":"2026-02-01T00:00:00Z"}}],"nextCursor":"2026-02-01T00:00:00Z","hasNext":true},"error":null}' ;;
   *"--category News"*)
     echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F4","siteUrl":"https://www.GitHub.com/blog"},"entries":{"id":"7","title":"news item","url":"https://x/7","publishedAt":"2026-03-01T00:00:00Z"}}],"nextCursor":"2026-03-01T00:00:00Z","hasNext":false},"error":null}' ;;
   *"timeline"*"--cursor 2026-01-01"*)

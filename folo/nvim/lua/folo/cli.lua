@@ -68,6 +68,7 @@ local function normalize(item)
     feed = feed.title or "",
     site = feed.siteUrl or "",
     starred = item.collections ~= nil,
+    starred_at = item.collections and item.collections.createdAt,
   }
 end
 
@@ -114,6 +115,10 @@ function M.collection(opts, cb)
     -- Items here are the collection itself, whether or not the CLI marks them.
     for _, e in ipairs(page and page.entries or {}) do
       e.starred = true
+    end
+    -- The server pages this list by star time, but the CLI's cursor is a publish time.
+    if page and page.next then
+      page.next = page.entries[#page.entries].starred_at or page.next
     end
     cb(err, page)
   end)

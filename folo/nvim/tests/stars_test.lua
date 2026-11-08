@@ -47,6 +47,18 @@ wait(function()
   return result ~= nil
 end, "collection timed out")
 eq({ result[1], result[2].entries[1].starred }, { nil, true })
+-- The collection pages by star time, not by the publish time the CLI offers as a cursor.
+eq(result[2].next, "2026-02-05T00:00:00Z")
+local cursor = result[2].next
+result = nil
+cli.collection({ cursor = cursor }, function(err, page)
+  result = { err, page }
+end)
+wait(function()
+  return result ~= nil
+end, "collection page 2 timed out")
+assert(logged("collection list --cursor 2026-02-05T00:00:00Z"), "star time cursor argv")
+eq({ result[1], result[2].entries[1].id, result[2].entries[1].starred, result[2].next }, { nil, "10", true, nil })
 result = nil
 cli.set_starred("7", true, function(err)
   result = { err }
@@ -130,7 +142,7 @@ for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false), "\n")
   end
 end
-for _, want in ipairs({ "20 (CLI default)", "newest first", "not by star time", "within 5 rows", "⭐ starred", "Star or unstar" }) do
+for _, want in ipairs({ "20 (CLI default)", "newest first", "by star time", "within 5 rows", "⭐ starred", "Star or unstar" }) do
   assert(text and text:find(want, 1, true), want .. " missing in:\n" .. tostring(text))
 end
 press("?")

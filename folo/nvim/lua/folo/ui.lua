@@ -350,7 +350,7 @@ local HELP = {
       function(cfg)
         return ("Pages: %s entries per load, newest first by publish time."):format(cfg.page_size or "20 (CLI default)")
       end,
-      "The starred list is ordered by publish time too, not by star time.",
+      "The starred list is newest first by star time; rows show the publish date.",
       function(cfg)
         if cfg.lazy_load_margin > 0 then
           return ("The next page loads when the cursor is within %d rows of the end."):format(cfg.lazy_load_margin)
@@ -625,7 +625,7 @@ function M.timeline(opts, title)
       if state[buf] ~= s then
         return
       end
-      -- The cursor is a publish time, so a page boundary can repeat entries.
+      -- The cursor is a timestamp, so a page boundary can repeat entries.
       for _, e in ipairs(page.entries) do
         if not s.ids[e.id] then
           s.ids[e.id] = true
