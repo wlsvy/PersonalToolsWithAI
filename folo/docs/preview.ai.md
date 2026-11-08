@@ -55,8 +55,17 @@ Debounce on `CursorMoved`; same entry is a no-op. Preview never marks read. `<CR
 
 ## Selection and opening
 - `<Tab>` toggles selection on the current item and moves down. Selected rows show `+` in the first column; read state stays in the second (`*` = unread).
-- Selection is per list, survives paging and read toggles, cleared by refresh and after a successful open.
+- Selection is per list, survives paging, cleared by refresh, after a successful open, and after a selection-wide action (`m`, `S`, `s`, `t`). A current-entry `m` leaves other state alone.
 - `gx` opens all selected, else the current item. http/https only; skipped items are reported. Confirm above `open_confirm_over`. Uses `vim.ui.open`; report per-URL failures.
+
+## Bulk read toggle
+- `toggle_read` in `ui.lua` mirrors `toggle_star`: `entries, from_selection = targets()`; `want = false`, then `want = want or not e.read`, so any unread entry means mark all read, and all read means mark all unread.
+- Call the existing `set_read(e, want)` only when `e.read ~= want`; it updates and redraws per success, and errors go to `notify_err` leaving the entry unchanged.
+- When `from_selection`, clear `e.selected` right after dispatch and `redraw(buf)`, same as `toggle_star`. A failed entry is then no longer selected; the error notice reports it.
+- No confirm prompt (reversible; `S` has none). No concurrency cap: one CLI process per entry, same as `S`.
+- HELP row: `{ "toggle_read", "Toggle read on selected entries, or the current one" }`. `article_test.lua` asserts absence of "Toggle read" when the key is disabled, so keep that prefix.
+- README `m` row: mention selected entries.
+- Tests (`stars_test.lua`, beside the star selection case, or `article_test.lua`): fixture entries 1 (unread) and 2 (read). Select both, `m` → `entry mark-read 1` only, no `mark-read 2`, selection cleared. Select both again, `m` → `mark-unread` for both. Crash mode leaves `*` state unchanged and notifies. Run all five tests.
 
 ## Help popup
 - `?` toggles a non-focusable editor-relative float at the top right, in `ui.lua`.

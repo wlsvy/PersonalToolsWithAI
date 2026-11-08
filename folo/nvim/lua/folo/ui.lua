@@ -362,7 +362,7 @@ local HELP = {
     keys = {
       { "open", "Mark read and focus the preview" },
       { "toggle_select", "Select or unselect, then move down" },
-      { "toggle_read", "Toggle read" },
+      { "toggle_read", "Toggle read on selected entries, or the current one" },
       { "toggle_star", "Star or unstar selected entries, or the current one" },
       { "open_url", "Open selected entries on the web, or the current one" },
       { "summarize", "AI summary of selected entries, or the current one" },
@@ -773,11 +773,22 @@ function M.timeline(opts, title)
         vim.api.nvim_win_set_cursor(0, { row, 0 })
       end
     end,
+    -- Marks all targets read unless every one is already read.
     toggle_read = function()
-      local e = list_item(buf)
-      if e then
-        set_read(e, not e.read)
+      local entries, from_selection = targets()
+      local want = false
+      for _, e in ipairs(entries) do
+        want = want or not e.read
       end
+      for _, e in ipairs(entries) do
+        if e.read ~= want then
+          set_read(e, want)
+        end
+        if from_selection then
+          e.selected = nil
+        end
+      end
+      redraw(buf)
     end,
     -- Stars all targets unless every one is already starred.
     toggle_star = function()

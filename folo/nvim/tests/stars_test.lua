@@ -117,6 +117,54 @@ end, "error not reported")
 assert(lines()[1]:find("\u{f005}", 1, true), lines()[1])
 vim.env.FAKE_FOLO_MODE = nil
 
+-- m on a selection: any unread entry marks all read, calling only what changes, then clears it.
+local function read_marks()
+  return { lines()[1]:sub(2, 2), lines()[2]:sub(2, 2) }
+end
+local function select_both()
+  vim.fn.writefile({}, log)
+  vim.api.nvim_win_set_cursor(0, { 1, 0 })
+  press("<Tab>")
+  press("<Tab>")
+end
+select_both()
+press("m")
+wait(function()
+  return lines()[1]:sub(2, 2) == " "
+end, "selection not marked read")
+assert(logged("entry mark-read 1") and not logged("entry mark-read 2"), vim.inspect(vim.fn.readfile(log)))
+eq({ lines()[1]:sub(1, 1), lines()[2]:sub(1, 1) }, { " ", " " })
+
+-- All read: marks all unread.
+select_both()
+press("m")
+wait(function()
+  return vim.deep_equal(read_marks(), { "*", "*" })
+end, "selection not marked unread")
+assert(logged("entry mark-unread 1") and logged("entry mark-unread 2"), vim.inspect(vim.fn.readfile(log)))
+
+-- Failed calls leave the read state in place.
+select_both()
+local before = #notices
+vim.env.FAKE_FOLO_MODE = "crash"
+press("m")
+wait(function()
+  return #notices >= before + 2
+end, "read errors not reported")
+vim.wait(100)
+eq(read_marks(), { "*", "*" })
+vim.env.FAKE_FOLO_MODE = nil
+
+-- No selection: only the current entry changes.
+vim.fn.writefile({}, log)
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+press("m")
+wait(function()
+  return lines()[1]:sub(2, 2) == " "
+end, "current entry not marked read")
+assert(logged("entry mark-read 1") and not logged("entry mark-read 2"), vim.inspect(vim.fn.readfile(log)))
+eq(read_marks(), { " ", "*" })
+
 -- Lazy loading: off at 0; on, moving near the end loads the next page once, deduplicated.
 local function move_to(row)
   vim.api.nvim_win_set_cursor(0, { row, 0 })
