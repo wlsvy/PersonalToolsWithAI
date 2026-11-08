@@ -18,14 +18,14 @@ Status: implemented. Test: `tests/stars_test.lua`; `article_test`/`ai_test` set 
 - Keymap `keymaps.list.toggle_star = "S"` in `init.lua` defaults; HELP list row `{ "toggle_star", "Star or unstar selected entries, or the current one" }`.
 - Targets: `targets()` (selection, else current). New state: `want = not all(starred)`. Run `cli.set_starred` per entry; on each success set `e.starred = want` and `redraw`; errors → `notify_err`, entry unchanged. Clear selection after dispatch (same as `queue`).
 - Starred view: unstar keeps the row; only the mark changes.
-- Row format: `selected .. mark .. " " .. star .. " " .. icon .. date ...`, `star = e.starred and "⭐" or "  "` (two spaces keep columns aligned). Always shown (no config toggle).
-- HELP list note: "Row marks: + selected, * unread, ⭐ starred."
+- Row format: `selected .. mark .. " " .. star .. " " .. icon .. date ...`, `star = e.starred and STAR or " "`, with `STAR = "\u{f005}"` (nf-fa-star; one space keeps columns aligned). Always shown (no config toggle).
+- HELP list note: "Row marks: + selected, * unread, <STAR> starred."
 
 ## Tests (`tests/fake_folo.sh`, new `tests/stars_test.lua` or extend `cli_test.lua`)
 - Fake: `collection add|remove` → ok; one timeline item with `"collections":{"createdAt":"..."}`.
 - Assert argv, `starred` normalize, collection forces true.
-- UI: `S` on unstarred → `collection add <id>` and ⭐ in line; again → `remove`, ⭐ gone, row stays; failure mode leaves state.
-- Update existing list-line assertion in `article_test.lua` (two spaces for unstarred).
+- UI: `S` on unstarred → `collection add <id>` and `STAR` in line; again → `remove`, `STAR` gone, row stays; failure mode leaves state.
+- Update existing list-line assertion in `article_test.lua` (one space for unstarred).
 
 ## Out of scope
 Preview key, sort by star time, `--view` on add.

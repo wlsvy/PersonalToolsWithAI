@@ -1,4 +1,4 @@
--- Site emoji for list rows, looked up by host in config.icons.domains.
+-- Site icons for list rows, looked up by host in config.icons.domains.
 local M = {}
 
 local function host(url)
@@ -10,7 +10,7 @@ local function host(url)
   return (h:gsub("^www%.", ""))
 end
 
--- for_entry(e) -> emoji; prefers the feed's site, then the entry URL. Subdomains inherit.
+-- for_entry(e) -> icon; prefers the feed's site, then the entry URL. Subdomains inherit.
 function M.for_entry(e)
   local cfg = require("folo").get_config().icons
   local h = host(e.site ~= "" and e.site or e.url)

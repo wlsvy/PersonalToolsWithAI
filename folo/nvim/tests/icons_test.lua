@@ -19,17 +19,17 @@ local function icon(site, url)
 end
 
 -- Lookup: site wins over URL, www/case/port/userinfo stripped, subdomains inherit.
-eq(icon("https://github.com"), "🐙")
-eq(icon("", "https://WWW.YouTube.com/watch?v=1"), "📺")
+eq(icon("https://github.com"), "\u{f09b}")
+eq(icon("", "https://WWW.YouTube.com/watch?v=1"), "\u{f16a}")
 eq(icon("https://example.com", "https://github.com/x"), "🦊")
 eq(icon("", "https://a.b.example.com:8443/x"), "🦊")
-eq(icon("", "https://user@news.ycombinator.com/item"), "🟧")
+eq(icon("", "https://user@news.ycombinator.com/item"), "\u{f1d4}")
 -- false drops a default; unknown, empty and non-web URLs fall back.
-eq(icon("", "https://reddit.com/r/x"), "📰")
-eq(icon("", "https://unknown.org/"), "📰")
-eq(icon("", ""), "📰")
-eq(icon("", "javascript:alert(1)"), "📰")
-eq(icon("", "https://localhost/"), "📰")
+eq(icon("", "https://reddit.com/r/x"), "\u{f09e}")
+eq(icon("", "https://unknown.org/"), "\u{f09e}")
+eq(icon("", ""), "\u{f09e}")
+eq(icon("", "javascript:alert(1)"), "\u{f09e}")
+eq(icon("", "https://localhost/"), "\u{f09e}")
 
 -- CLI maps feeds.siteUrl to entry.site.
 local result
@@ -41,6 +41,6 @@ assert(vim.wait(3000, function()
 end), "timed out")
 eq(result[1], nil)
 eq(result[2].entries[1].site, "https://www.GitHub.com/blog")
-eq(icons.for_entry(result[2].entries[1]), "🐙")
+eq(icons.for_entry(result[2].entries[1]), "\u{f09b}")
 
 print("ok")

@@ -7,6 +7,7 @@ local render = require("folo.render")
 local M = {}
 
 local PREVIEW_NAME = "folo://preview"
+local STAR = "\u{f005}" -- nf-fa-star
 
 -- Per-list state, keyed by bufnr.
 local state = {}
@@ -346,7 +347,7 @@ local HELP = {
     title = " Folo list ",
     notes = {
       "Moving the cursor previews an entry without marking it read.",
-      "Row marks: + selected, * unread, ⭐ starred. Summaries appear as child rows.",
+      "Row marks: + selected, * unread, " .. STAR .. " starred. Summaries appear as child rows.",
       function(cfg)
         return ("Pages: %s entries per load, newest first by publish time."):format(cfg.page_size or "20 (CLI default)")
       end,
@@ -487,7 +488,7 @@ local function redraw(buf)
   for _, e in ipairs(s.items) do
     local selected = e.selected and "+" or " "
     local mark = e.read and " " or "*"
-    local star = e.starred and "⭐" or "  "
+    local star = e.starred and STAR or " "
     local icon = icons_on and icons.for_entry(e) .. " " or ""
     table.insert(lines, ("%s%s %s %s%s  %s  %s"):format(selected, mark, star, icon, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
     table.insert(rows, { entry = e, child = false })

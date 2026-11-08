@@ -158,7 +158,7 @@ end
 wait(function()
   return lines()[1]:find("first line", 1, true) ~= nil
 end, "list did not load")
-eq(lines()[1], " *    📰 2026-01-02  F1  first line")
+eq(lines()[1], " *   \u{f09e} 2026-01-02  F1  first line")
 eq(vim.api.nvim_get_current_win(), list_win)
 
 -- First entry's feed body is thin ("body"), Folo readable is thin, so curl appends after it.

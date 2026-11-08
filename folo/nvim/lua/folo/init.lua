@@ -13,18 +13,19 @@ local defaults = {
   open_confirm_over = 10, -- confirm before opening more URLs than this
   icons = {
     enabled = true,
-    default = "📰", -- unmatched host or no URL
+    default = "\u{f09e}", -- nf-fa-rss; unmatched host or no URL
     -- lowercase host without "www."; subdomains inherit; false drops a default
+    -- Values are Nerd Font glyphs; any string works.
     domains = {
-      ["github.com"] = "🐙",
-      ["youtube.com"] = "📺",
-      ["reddit.com"] = "👽",
-      ["news.ycombinator.com"] = "🟧",
-      ["medium.com"] = "✍️",
-      ["substack.com"] = "📮",
-      ["arxiv.org"] = "📄",
-      ["x.com"] = "🐦",
-      ["twitter.com"] = "🐦",
+      ["github.com"] = "\u{f09b}", -- nf-fa-github
+      ["youtube.com"] = "\u{f16a}", -- nf-fa-youtube_play
+      ["reddit.com"] = "\u{f281}", -- nf-fa-reddit_alien
+      ["news.ycombinator.com"] = "\u{f1d4}", -- nf-fa-hacker_news
+      ["medium.com"] = "\u{f23a}", -- nf-fa-medium
+      ["substack.com"] = "\u{f0e0}", -- nf-fa-envelope
+      ["arxiv.org"] = "\u{f0f6}", -- nf-fa-file_text_o
+      ["x.com"] = "\u{f099}", -- nf-fa-twitter
+      ["twitter.com"] = "\u{f099}", -- nf-fa-twitter
     },
   },
   article = {

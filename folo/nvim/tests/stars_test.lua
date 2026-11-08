@@ -80,18 +80,18 @@ end
 wait(function()
   return (lines()[2] or ""):find("second", 1, true) ~= nil
 end, "list did not load")
-eq(lines()[1], " *    📰 2026-01-02  F1  first line")
-assert(lines()[2]:find("⭐", 1, true), lines()[2])
+eq(lines()[1], " *   \u{f09e} 2026-01-02  F1  first line")
+assert(lines()[2]:find("\u{f005}", 1, true), lines()[2])
 
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 press("S")
 wait(function()
-  return lines()[1]:find("⭐", 1, true) ~= nil
+  return lines()[1]:find("\u{f005}", 1, true) ~= nil
 end, "star not shown")
 assert(logged("collection add 1"), "add 1")
 press("S")
 wait(function()
-  return not lines()[1]:find("⭐", 1, true)
+  return not lines()[1]:find("\u{f005}", 1, true)
 end, "star not removed")
 assert(logged("collection remove 1"), "remove 1")
 eq(#lines(), 2)
@@ -102,7 +102,7 @@ press("<Tab>")
 press("<Tab>")
 press("S")
 wait(function()
-  return lines()[1]:find("⭐", 1, true) ~= nil
+  return lines()[1]:find("\u{f005}", 1, true) ~= nil
 end, "selection not starred")
 assert(logged("collection add 1") and not logged("collection add 2"), vim.inspect(vim.fn.readfile(log)))
 eq({ lines()[1]:sub(1, 1), lines()[2]:sub(1, 1) }, { " ", " " })
@@ -114,7 +114,7 @@ press("S")
 wait(function()
   return #notices > 0 and notices[#notices]:find("exit 3", 1, true) ~= nil
 end, "error not reported")
-assert(lines()[1]:find("⭐", 1, true), lines()[1])
+assert(lines()[1]:find("\u{f005}", 1, true), lines()[1])
 vim.env.FAKE_FOLO_MODE = nil
 
 -- Lazy loading: off at 0; on, moving near the end loads the next page once, deduplicated.
@@ -142,7 +142,7 @@ for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false), "\n")
   end
 end
-for _, want in ipairs({ "20 (CLI default)", "newest first", "by star time", "within 5 rows", "⭐ starred", "Star or unstar" }) do
+for _, want in ipairs({ "20 (CLI default)", "newest first", "by star time", "within 5 rows", "\u{f005} starred", "Star or unstar" }) do
   assert(text and text:find(want, 1, true), want .. " missing in:\n" .. tostring(text))
 end
 press("?")
