@@ -16,6 +16,8 @@ folo/
     lua/folo/ui.lua      list + preview windows, selection, keymaps
     lua/folo/article.lua fetches article pages (curl, headless browser), see preview.ai.md
     lua/folo/ai.lua      summary/translation queue and files, see ai.ai.md
+    lua/folo/icons.lua   site emoji per list row, see icons.ai.md
+    (stars: stars.ai.md; auto paging + help notes: paging.ai.md)
     lua/folo/render.lua  html -> text; own copy of the sample's module, not shared
     tests/cli_test.lua   headless CLI-layer self-check using tests/fake_folo.sh
     tests/article_test.lua  article fetching and UI self-check
@@ -32,6 +34,7 @@ folo/
 - `entry mark-read <id>`, `entry mark-unread <id>`.
 - `timeline --category <name>`: exact, case-sensitive match; unknown name returns an empty list.
 - `collection list [--limit] [--cursor]` -> same shape as `timeline`.
+- `collection add <id> [--view]`, `collection remove <id>`.
 - `subscription list [--view] [--category]` -> `{subscriptions:[{category,...}]}`; `category` may be null.
 
 ## Config
@@ -75,6 +78,8 @@ Subscription management, collection add/remove, OPML, search, mark-all-read, syn
 ```sh
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/cli_test.lua   # -> ok
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/article_test.lua   # -> ok
+nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/icons_test.lua   # -> ok
+nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/stars_test.lua   # -> ok
 ```
 - Test covers: parsing, read fallback, argv (no `--token`), UNAUTHORIZED, non-zero exit, invalid JSON, timeout, missing executable, CLI parsing and failures here; UI in `article_test.lua`.
 - Manual, run by the user because the sandbox denies `~/.folo` and other home paths: `:Folo`, cursor move, `<CR>`, `m`, `]p`, `<Tab>`, `gx`, `R`.

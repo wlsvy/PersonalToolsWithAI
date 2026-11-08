@@ -1,6 +1,7 @@
 local ai = require("folo.ai")
 local article = require("folo.article")
 local cli = require("folo.cli")
+local icons = require("folo.icons")
 local render = require("folo.render")
 
 local M = {}
@@ -343,11 +344,25 @@ end
 local HELP = {
   list = {
     title = " Folo list ",
-    notes = { "Moving the cursor previews an entry without marking it read.", "Row marks: + selected, * unread. Summaries appear as child rows." },
+    notes = {
+      "Moving the cursor previews an entry without marking it read.",
+      "Row marks: + selected, * unread, ⭐ starred. Summaries appear as child rows.",
+      function(cfg)
+        return ("Pages: %s entries per load, newest first by publish time."):format(cfg.page_size or "20 (CLI default)")
+      end,
+      "The starred list is ordered by publish time too, not by star time.",
+      function(cfg)
+        if cfg.lazy_load_margin > 0 then
+          return ("The next page loads when the cursor is within %d rows of the end."):format(cfg.lazy_load_margin)
+        end
+        return "Auto paging is off; load pages with " .. (cfg.keymaps.list.next_page or "next_page") .. "."
+      end,
+    },
     keys = {
       { "open", "Mark read and focus the preview" },
       { "toggle_select", "Select or unselect, then move down" },
       { "toggle_read", "Toggle read" },
+      { "toggle_star", "Star or unstar selected entries, or the current one" },
       { "open_url", "Open selected entries on the web, or the current one" },
       { "summarize", "AI summary of selected entries, or the current one" },
       { "translate", "AI translation appended below the summary" },
@@ -380,7 +395,8 @@ local function close_help()
 end
 
 local function help_lines(kind)
-  local keymaps = require("folo").get_config().keymaps[kind]
+  local cfg = require("folo").get_config()
+  local keymaps = cfg.keymaps[kind]
   local rows = {}
   local key_width = 0
   for _, item in ipairs(HELP[kind].keys) do
@@ -398,6 +414,8 @@ local function help_lines(kind)
   end
   table.insert(lines, "")
   for _, note in ipairs(HELP[kind].notes) do
+    -- Function notes read live config values.
+    note = type(note) == "function" and note(cfg) or note
     table.insert(lines, " " .. note .. " ")
   end
   return lines
@@ -465,10 +483,13 @@ local function redraw(buf)
   local win = vim.fn.bufwinid(buf)
   local current = win ~= -1 and s.rows[vim.api.nvim_win_get_cursor(win)[1]] or nil
   local lines, rows = {}, {}
+  local icons_on = require("folo").get_config().icons.enabled
   for _, e in ipairs(s.items) do
     local selected = e.selected and "+" or " "
     local mark = e.read and " " or "*"
-    table.insert(lines, ("%s%s %s  %s  %s"):format(selected, mark, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
+    local star = e.starred and "⭐" or "  "
+    local icon = icons_on and icons.for_entry(e) .. " " or ""
+    table.insert(lines, ("%s%s %s %s%s  %s  %s"):format(selected, mark, star, icon, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
     table.insert(rows, { entry = e, child = false })
     local info = ai.info(e.id)
     if info.visible then
@@ -577,7 +598,7 @@ function M.timeline(opts, title)
   local buf = create_scratch("folo://timeline/" .. title, "folo-timeline")
   vim.api.nvim_set_current_buf(buf)
   vim.wo.wrap = false
-  state[buf] = { items = {}, rows = {}, next = nil, loading = false }
+  state[buf] = { items = {}, rows = {}, ids = {}, next = nil, loading = false }
   preview.list = buf
   ensure_preview_win(cfg)
   setup_preview_keys(cfg)
@@ -604,7 +625,13 @@ function M.timeline(opts, title)
       if state[buf] ~= s then
         return
       end
-      vim.list_extend(s.items, page.entries)
+      -- The cursor is a publish time, so a page boundary can repeat entries.
+      for _, e in ipairs(page.entries) do
+        if not s.ids[e.id] then
+          s.ids[e.id] = true
+          table.insert(s.items, e)
+        end
+      end
       s.next = page.next
       redraw(buf)
       if preview.list == buf then
@@ -631,11 +658,28 @@ function M.timeline(opts, title)
     end)
   end
 
+  local function set_starred(e, starred)
+    cli.set_starred(e.id, starred, function(err)
+      if err then
+        return notify_err(err)
+      end
+      e.starred = starred
+      if vim.api.nvim_buf_is_valid(buf) and state[buf] then
+        redraw(buf)
+      end
+    end)
+  end
+
   vim.api.nvim_clear_autocmds({ group = vim.api.nvim_create_augroup("folo_list_" .. buf, {}) })
   vim.api.nvim_create_autocmd("CursorMoved", {
     group = "folo_list_" .. buf,
     buffer = buf,
     callback = function()
+      local s = state[buf]
+      local m = cfg.lazy_load_margin
+      if m > 0 and s.next and vim.api.nvim_win_get_cursor(0)[1] > #s.rows - m then
+        load_page(s.next)
+      end
       local requested = list_row(buf)
       vim.defer_fn(function()
         local row = list_row(buf)
@@ -734,6 +778,23 @@ function M.timeline(opts, title)
         set_read(e, not e.read)
       end
     end,
+    -- Stars all targets unless every one is already starred.
+    toggle_star = function()
+      local entries, from_selection = targets()
+      local want = false
+      for _, e in ipairs(entries) do
+        want = want or not e.starred
+      end
+      for _, e in ipairs(entries) do
+        if e.starred ~= want then
+          set_starred(e, want)
+        end
+        if from_selection then
+          e.selected = nil
+        end
+      end
+      redraw(buf)
+    end,
     -- Opens the selection, or the current entry when nothing is selected.
     open_url = function()
       local selected = vim.tbl_filter(function(e)
@@ -764,6 +825,7 @@ function M.timeline(opts, title)
     refresh = function()
       state[buf].items = {}
       state[buf].rows = {}
+      state[buf].ids = {}
       state[buf].next = nil
       preview.entry = nil
       load_page(nil)

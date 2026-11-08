@@ -16,6 +16,7 @@ folo.setup({
   timeout_ms = 2000,
   list_width = 30,
   preview_debounce_ms = 10,
+  lazy_load_margin = 0,
   open_confirm_over = 2,
   article = { browser_cmd = { dir .. "/fake_browser.sh" }, thin_chars = 20 },
   ai = { dir = vim.fn.tempname() },
@@ -157,7 +158,7 @@ end
 wait(function()
   return lines()[1]:find("first line", 1, true) ~= nil
 end, "list did not load")
-eq(lines()[1], " * 2026-01-02  F1  first line")
+eq(lines()[1], " *    📰 2026-01-02  F1  first line")
 eq(vim.api.nvim_get_current_win(), list_win)
 
 -- First entry's feed body is thin ("body"), Folo readable is thin, so curl appends after it.
@@ -193,6 +194,8 @@ press("]p")
 wait(function()
   return lines()[3] ~= nil
 end, "next page did not load")
+-- The next page repeats entry 2 at the cursor time; it is shown once.
+eq(#lines(), 3)
 eq(lines()[1]:sub(1, 1), "+")
 vim.api.nvim_win_set_cursor(0, { 3, 0 })
 press("<Tab>")

@@ -41,13 +41,14 @@ eq(#page.entries, 2)
 eq(page.next, "2026-01-01T00:00:00Z")
 eq({ page.entries[1].id, page.entries[1].read, page.entries[1].feed }, { "1", false, "F1" })
 eq({ page.entries[2].url, page.entries[2].feed }, { "", "" })
+eq({ page.entries[1].starred, page.entries[2].starred }, { false, true })
 eq(last_args(), "--format json timeline --unread-only")
 assert(not vim.fn.readfile(log)[1]:find("--token", 1, true))
 
 err, page = await(function(cb)
   cli.timeline({ cursor = "2026-01-01" }, cb)
 end)
-eq({ err, #page.entries, page.next }, { nil, 1, nil })
+eq({ err, #page.entries, page.next }, { nil, 2, nil })
 
 local e
 err, e = await(function(cb)

@@ -66,6 +66,8 @@ local function normalize(item)
     content = e.content,
     read = item.read == true,
     feed = feed.title or "",
+    site = feed.siteUrl or "",
+    starred = item.collections ~= nil,
   }
 end
 
@@ -108,7 +110,13 @@ function M.collection(opts, cb)
   local args = { "collection", "list" }
   add_flag(args, "--limit", cfg.page_size)
   add_flag(args, "--cursor", opts.cursor)
-  list_page(args, cb)
+  list_page(args, function(err, page)
+    -- Items here are the collection itself, whether or not the CLI marks them.
+    for _, e in ipairs(page and page.entries or {}) do
+      e.starred = true
+    end
+    cb(err, page)
+  end)
 end
 
 -- categories(cb(err, names)): sorted unique category names of the subscriptions.
@@ -152,6 +160,13 @@ function M.entry(id, cb)
       return cb("entry not found: " .. id)
     end
     cb(nil, normalize(data))
+  end)
+end
+
+-- set_starred(id, starred, cb(err))
+function M.set_starred(id, starred, cb)
+  M.run({ "collection", starred and "add" or "remove", id }, function(err)
+    cb(err)
   end)
 end
 

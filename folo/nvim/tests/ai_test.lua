@@ -20,6 +20,7 @@ folo.setup({
   render = "strip",
   timeout_ms = 2000,
   preview_debounce_ms = 10,
+  lazy_load_margin = 0,
   article = { thin_chars = 20 },
   ai = {
     cmd = { dir .. "/fake_claude.sh" },

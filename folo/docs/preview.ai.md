@@ -24,7 +24,7 @@ article = {
   browser_timeout_ms = 30000,
 },
 keymaps = {
-  list = { open = "<CR>", toggle_select = "<Tab>", toggle_read = "m", open_url = "gx", next_page = "]p", refresh = "r", close = "q", help = "?" },
+  list = { open = "<CR>", toggle_select = "<Tab>", toggle_read = "m", toggle_star = "S", open_url = "gx", next_page = "]p", refresh = "r", close = "q", help = "?" },
   preview = { open_url = "gx", browser = "R", close = "q", help = "?" },
 }
 ```

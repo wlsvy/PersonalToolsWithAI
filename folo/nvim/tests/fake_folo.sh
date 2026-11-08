@@ -12,14 +12,17 @@ esac
 case "$*" in
   *"subscription list"*)
     echo '{"ok":true,"data":{"subscriptions":[{"category":"News"},{"category":"AI"},{"category":null},{"category":"AI"},{}]},"error":null}' ;;
+  *"collection add 404"*)
+    echo '{"ok":false,"data":null,"error":{"code":"NOT_FOUND","message":"no entry"}}' >&2; exit 1 ;;
+  *"collection add"*|*"collection remove"*) echo '{"ok":true,"data":null,"error":null}' ;;
   *"collection list"*)
     echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":"F3"},"entries":{"id":"9","title":"saved","url":"https://x/9","publishedAt":"2026-02-01T00:00:00Z"}}],"nextCursor":"2026-02-01T00:00:00Z","hasNext":false},"error":null}' ;;
   *"--category News"*)
-    echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F4"},"entries":{"id":"7","title":"news item","url":"https://x/7","publishedAt":"2026-03-01T00:00:00Z"}}],"nextCursor":"2026-03-01T00:00:00Z","hasNext":false},"error":null}' ;;
+    echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F4","siteUrl":"https://www.GitHub.com/blog"},"entries":{"id":"7","title":"news item","url":"https://x/7","publishedAt":"2026-03-01T00:00:00Z"}}],"nextCursor":"2026-03-01T00:00:00Z","hasNext":false},"error":null}' ;;
   *"timeline"*"--cursor 2026-01-01"*)
-    echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":"F2"},"entries":{"id":"3","title":"third","url":"javascript:alert(1)","publishedAt":"2025-12-31T00:00:00Z"}}],"nextCursor":"2025-12-31T00:00:00Z","hasNext":false},"error":null}' ;;
+    echo '{"ok":true,"data":{"entries":[{"read":true,"feeds":{"title":null},"entries":{"id":"2","title":"second","url":null,"publishedAt":"2026-01-01T00:00:00Z"}},{"read":true,"feeds":{"title":"F2"},"entries":{"id":"3","title":"third","url":"javascript:alert(1)","publishedAt":"2025-12-31T00:00:00Z"}}],"nextCursor":"2025-12-31T00:00:00Z","hasNext":false},"error":null}' ;;
   *timeline*)
-    echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F1"},"entries":{"id":"1","title":"first\nline","url":"https://x/1","publishedAt":"2026-01-02T00:00:00Z"}},{"read":true,"feeds":{"title":null},"entries":{"id":"2","title":"second","url":null,"publishedAt":"2026-01-01T00:00:00Z"}}],"nextCursor":"2026-01-01T00:00:00Z","hasNext":true},"error":null}' ;;
+    echo '{"ok":true,"data":{"entries":[{"read":false,"feeds":{"title":"F1"},"entries":{"id":"1","title":"first\nline","url":"https://x/1","publishedAt":"2026-01-02T00:00:00Z"}},{"read":true,"collections":{"createdAt":"2026-01-03T00:00:00Z"},"feeds":{"title":null},"entries":{"id":"2","title":"second","url":null,"publishedAt":"2026-01-01T00:00:00Z"}}],"nextCursor":"2026-01-01T00:00:00Z","hasNext":true},"error":null}' ;;
   *"entry get 1"*)
     echo '{"ok":true,"data":{"feeds":{"title":"F1"},"entries":{"id":"1","title":"first","url":"https://x/1","content":"<p>body</p>","publishedAt":"2026-01-02T00:00:00Z"}},"error":null}' ;;
   *"entry get 2"*)

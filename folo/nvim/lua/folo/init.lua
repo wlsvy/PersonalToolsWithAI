@@ -9,7 +9,24 @@ local defaults = {
   render = "auto", -- "auto" | "pandoc" | "strip"
   list_width = 0.4, -- fraction of the tab, or columns when >= 1
   preview_debounce_ms = 150,
+  lazy_load_margin = 5, -- load the next page within this many rows of the end; 0 = off
   open_confirm_over = 10, -- confirm before opening more URLs than this
+  icons = {
+    enabled = true,
+    default = "📰", -- unmatched host or no URL
+    -- lowercase host without "www."; subdomains inherit; false drops a default
+    domains = {
+      ["github.com"] = "🐙",
+      ["youtube.com"] = "📺",
+      ["reddit.com"] = "👽",
+      ["news.ycombinator.com"] = "🟧",
+      ["medium.com"] = "✍️",
+      ["substack.com"] = "📮",
+      ["arxiv.org"] = "📄",
+      ["x.com"] = "🐦",
+      ["twitter.com"] = "🐦",
+    },
+  },
   article = {
     auto_fetch = true, -- false: no automatic curl; Folo readability still runs
     thin_chars = 200, -- feed body shorter than this (text chars) triggers the fetch chain
@@ -33,6 +50,7 @@ local defaults = {
       open = "<CR>",
       toggle_select = "<Tab>",
       toggle_read = "m",
+      toggle_star = "S",
       open_url = "gx",
       next_page = "]p",
       refresh = "r",
