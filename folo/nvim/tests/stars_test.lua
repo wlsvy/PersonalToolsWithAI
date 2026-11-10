@@ -80,7 +80,7 @@ end
 wait(function()
   return (lines()[2] or ""):find("second", 1, true) ~= nil
 end, "list did not load")
-eq(lines()[1], " *   \u{f09e} 2026-01-02  F1  first line")
+eq(lines()[1], " *   \u{f09e}  2026-01-02  F1  first line")
 assert(lines()[2]:find("\u{f005}", 1, true), lines()[2])
 
 vim.api.nvim_win_set_cursor(0, { 1, 0 })

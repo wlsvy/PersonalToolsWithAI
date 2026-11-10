@@ -8,6 +8,7 @@ local M = {}
 
 local PREVIEW_NAME = "folo://preview"
 local STAR = "\u{f005}" -- nf-fa-star
+local ICON_NS = vim.api.nvim_create_namespace("folo_icons")
 
 -- Per-list state, keyed by bufnr.
 local state = {}
@@ -483,14 +484,23 @@ local function redraw(buf)
   local s = state[buf]
   local win = vim.fn.bufwinid(buf)
   local current = win ~= -1 and s.rows[vim.api.nvim_win_get_cursor(win)[1]] or nil
-  local lines, rows = {}, {}
+  local lines, rows, colored = {}, {}, {}
   local icons_on = require("folo").get_config().icons.enabled
   for _, e in ipairs(s.items) do
     local selected = e.selected and "+" or " "
     local mark = e.read and " " or "*"
     local star = e.starred and STAR or " "
-    local icon = icons_on and icons.for_entry(e) .. " " or ""
-    table.insert(lines, ("%s%s %s %s%s  %s  %s"):format(selected, mark, star, icon, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
+    local prefix = ("%s%s %s "):format(selected, mark, star)
+    local cell = ""
+    if icons_on then
+      local icon, color = icons.for_entry(e)
+      -- Glyphs take one cell and badges two; a fixed column keeps the rows aligned.
+      cell = icon .. (" "):rep(2 - vim.fn.strdisplaywidth(icon)) .. " "
+      if type(color) == "string" and color:match("^#%x%x%x%x%x%x$") then
+        table.insert(colored, { row = #lines, col = #prefix, end_col = #prefix + #icon, color = color })
+      end
+    end
+    table.insert(lines, ("%s%s%s  %s  %s"):format(prefix, cell, e.published:sub(1, 10), one_line(e.feed), one_line(e.title)))
     table.insert(rows, { entry = e, child = false })
     local info = ai.info(e.id)
     if info.visible then
@@ -500,6 +510,13 @@ local function redraw(buf)
   end
   s.rows = rows
   set_lines(buf, #lines > 0 and lines or { "(no entries)" })
+  vim.api.nvim_buf_clear_namespace(buf, ICON_NS, 0, -1)
+  for _, c in ipairs(colored) do
+    local group = "FoloIcon" .. c.color:sub(2)
+    -- Set on every redraw so a colorscheme change recovers.
+    vim.api.nvim_set_hl(0, group, { fg = c.color })
+    vim.api.nvim_buf_set_extmark(buf, ICON_NS, c.row, c.col, { end_col = c.end_col, hl_group = group })
+  end
   -- Child rows shift everything below them; stay on the same item.
   if current then
     -- A removed child row falls back to its entry.

@@ -11,7 +11,20 @@ folo login
 
 토큰은 CLI가 관리합니다. 플러그인은 토큰을 저장하지 않습니다. 환경변수 `FOLO_TOKEN`도 사용할 수 있습니다.
 
-목록의 사이트 아이콘과 별표는 Nerd Font 글리프입니다. 터미널에 Nerd Font를 설정하지 않으면 빈칸이나 깨진 문자로 보입니다.
+목록의 사이트 아이콘과 별표는 Nerd Font 글리프입니다. 터미널에 Nerd Font를 설정하지 않으면 빈칸이나 깨진 문자로 보입니다. 표에 없는 사이트는 도메인에서 딴 두 글자 배지로 표시합니다.
+
+사이트별 아이콘과 색상의 기본 표는 `nvim/lua/folo/init.lua`의 `icons.domains`에 있습니다. 개인 항목은 `setup()` 옵션으로 추가합니다.
+
+```lua
+opts = {
+  icons = {
+    domains = {
+      ["example.com"] = { "\u{f09e}", color = "#4c8bf5" }, -- 글리프와 색상
+      ["example.org"] = { color = "#4c8bf5" }, -- 배지는 유지하고 색상만 지정
+    },
+  },
+}
+```
 
 ## 설치
 
