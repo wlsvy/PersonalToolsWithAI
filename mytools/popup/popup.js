@@ -1,7 +1,7 @@
 import { toggleGrayscale } from '../features/grayscale/grayscale.js';
 import { listTabs } from '../features/tab-list/tab-list.js';
 import { clipMarkdown } from '../features/clip-markdown/clip-markdown.js';
-import { openSummary } from '../features/summarize/summarize.js';
+import { openSummary, openSummaryPanel } from '../features/summarize/summarize.js';
 
 const status = document.getElementById('status');
 
@@ -21,6 +21,23 @@ document.getElementById('clip').addEventListener('click', async () => {
   // popup이 포커스를 가진 쪽이라 페이지가 아니라 여기서 쓴다
   await navigator.clipboard.writeText(md);
   status.textContent = `복사했습니다 (${md.length}자).`;
+});
+
+// sidePanel.open()은 사용자 제스처 안에서만 되므로 클릭 뒤에는 await하지 않는다. 그래서 활성 탭을 미리 구해 둔다.
+const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+document.getElementById('summary-panel').addEventListener('click', () => {
+  // chrome:// 등은 Chrome 정책상 주입 불가
+  if (!/^https?:/.test(activeTab.url ?? '')) {
+    status.textContent = '이 페이지에서는 사용할 수 없습니다.';
+    return;
+  }
+  const { key, opened } = openSummaryPanel(activeTab);
+  const { id, title, url } = activeTab;
+  chrome.runtime.sendMessage({ type: 'summary-panel', key, tab: { id, title, url } });
+  opened.then(
+    () => window.close(),
+    (e) => { status.textContent = `사이드 패널을 열지 못했습니다: ${e.message}`; },
+  );
 });
 
 document.getElementById('grayscale').addEventListener('click', async () => {

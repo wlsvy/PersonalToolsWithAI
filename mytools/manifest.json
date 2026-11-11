@@ -11,7 +11,8 @@
     "contextMenus",
     "offscreen",
     "storage",
-    "nativeMessaging"
+    "nativeMessaging",
+    "sidePanel"
   ],
   "background": {
     "service_worker": "background.js",

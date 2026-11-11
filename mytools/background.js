@@ -1,6 +1,6 @@
 import { toggleGrayscale } from './features/grayscale/grayscale.js';
 import { clipMarkdown } from './features/clip-markdown/clip-markdown.js';
-import { openSummary } from './features/summarize/summarize.js';
+import { openSummary, openSummaryPanel, fillSummary } from './features/summarize/summarize.js';
 
 // 우클릭 메뉴 id → 제목, 실행 함수
 const MENUS = {
@@ -14,6 +14,13 @@ const MENUS = {
     },
   },
   summary: { title: '요약·번역 (새 탭)', run: (tab) => openSummary(tab) },
+  'summary-panel': {
+    title: '요약·번역 (사이드 패널)',
+    run: async (tab) => {
+      const { key, opened } = openSummaryPanel(tab);
+      await Promise.all([opened, fillSummary(key, tab)]);
+    },
+  },
 };
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -25,6 +32,11 @@ chrome.runtime.onInstalled.addListener(() => {
 // chrome:// 등 주입 불가 페이지에서는 실패하는데, 알릴 UI가 없어 무시한다
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   MENUS[info.menuItemId]?.run(tab).catch(() => {});
+});
+
+// popup [사이드 패널 요약]은 패널을 열면 닫히므로 추출은 여기 맡긴다
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'summary-panel') fillSummary(msg.key, msg.tab);
 });
 
 // service worker에는 navigator.clipboard가 없어 offscreen 문서에서 쓴다

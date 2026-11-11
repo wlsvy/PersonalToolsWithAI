@@ -6,9 +6,10 @@
 
 | 파일 | 역할 |
 |---|---|
-| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `countWords(text)`, `stripLinkTitles(md)`, `stripCitations(md)`, `sourceLink(title, url)` |
+| `mytools/features/summarize/summarize.js` | `openSummary(tab)`, `openSummaryPanel(tab)`, `fillSummary(key, tab)`, `countWords(text)`, `stripLinkTitles(md)`, `stripCitations(md)`, `sourceLink(title, url)` |
 | `mytools/features/summarize/summarize.test.mjs` | 위 순수 함수 테스트 (`node`로 실행) |
-| `mytools/background.js` | `MENUS.summary` 우클릭 메뉴 → `openSummary(tab)` |
+| `mytools/background.js` | `MENUS.summary` → `openSummary(tab)`, `MENUS['summary-panel']` → `openSummaryPanel` + `fillSummary`, `onMessage('summary-panel')` → `fillSummary` |
+| `mytools/popup/popup.js` | [사이드 패널에 요약] → `openSummaryPanel(activeTab)` + `sendMessage({ type: 'summary-panel', key, tab })` 후 `window.close()` |
 | `mytools/popup/popup.js` | 탭 목록의 [요약] 버튼 → `openSummary(tab, { active: false })` (뒤에서 열기, popup 유지) ([tab-list.ai.md](tab-list.ai.md)) |
 | `mytools/result/result.{html,js}` | 결과 탭: 요약 요청·표시, [요약 Markdown 복사], [마저 번역], [번역 Markdown 복사] |
 | `mytools/result/vendor/marked.esm.js` | marked 18.1.1 (ESM) |
@@ -40,6 +41,14 @@
   translate: ask('sonnet', 'translate.md', markdown) → { ok, text }
   실패:    { ok: false, error }
 ```
+
+## 사이드 패널
+
+- `sidePanel.open()`은 사용자 제스처 안에서만 동작합니다. 클릭 뒤 `await`(추출, `tabs.query`)를 거치면 제스처가 끊기므로 `setOptions({ tabId, path: result.html?id=key })`와 `open({ tabId })`를 동기로 먼저 부르고, 추출은 그 뒤에 합니다. popup은 활성 탭을 로드 시점에 미리 조회해 둡니다.
+- 패널이 열리면 popup이 닫히므로 popup은 추출을 background에 메시지로 넘깁니다. 우클릭 메뉴는 이미 background라 `fillSummary`를 직접 부릅니다.
+- `result.js` `loadDoc()`: `storage.onChanged` 리스너를 먼저 달고 `get` → 없으면 "본문 추출 중…" 표시 후 최대 15초 대기합니다. 추출 실패는 `fillSummary`가 `{ error }`를 같은 키에 넣어 알립니다.
+- manifest에 `side_panel.default_path`를 두지 않습니다. 패널은 `setOptions`로 연 탭에만 붙습니다.
+- 미확인: 실제 Chrome에서 popup 클릭 → 패널 열림, 우클릭 메뉴 → 패널 열림을 아직 확인하지 않았습니다.
 
 ## 확장 측 결정
 

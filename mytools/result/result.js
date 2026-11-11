@@ -35,7 +35,26 @@ function setStatus(text, busy = false) {
   status.classList.toggle('busy', busy);
 }
 const key = new URLSearchParams(location.search).get('id');
-const { [key]: doc } = await chrome.storage.session.get(key);
+const doc = await loadDoc();
+
+// 사이드 패널은 추출보다 먼저 열려 데이터가 뒤늦게 들어온다. 리스너를 먼저 달아야 그 사이에 들어온 값을 놓치지 않는다.
+// 브라우저 재시작 등으로 끝내 안 들어오면 undefined.
+async function loadDoc() {
+  let resolve;
+  const arrived = new Promise((r) => (resolve = r));
+  const onChanged = (changes, area) => {
+    if (area === 'session' && changes[key]) resolve(changes[key].newValue);
+  };
+  chrome.storage.onChanged.addListener(onChanged);
+  try {
+    const { [key]: stored } = await chrome.storage.session.get(key);
+    if (stored) return stored;
+    setStatus('본문 추출 중…', true);
+    return await Promise.race([arrived, new Promise((r) => setTimeout(r, 15000))]);
+  } finally {
+    chrome.storage.onChanged.removeListener(onChanged);
+  }
+}
 
 // 호스트 응답과 같은 { ok, ... } 모양으로 맞춘다
 async function ask(msg) {
@@ -50,6 +69,8 @@ async function ask(msg) {
 if (!doc) {
   // 브라우저를 재시작하면 storage.session이 비워진다
   setStatus('데이터가 없습니다. 원래 페이지에서 다시 실행하세요.');
+} else if (doc.error) {
+  setStatus(doc.error);
 } else {
   // 페이지 제목/본문은 외부 데이터라 textContent로만 넣는다
   document.title = `요약 · ${doc.title}`;
