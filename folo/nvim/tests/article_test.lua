@@ -148,9 +148,9 @@ require("folo.ui").timeline({}, "all")
 local list = vim.api.nvim_get_current_buf()
 local list_win = vim.api.nvim_get_current_win()
 eq(vim.api.nvim_buf_get_name(list), "folo://timeline/all")
-eq(#vim.api.nvim_tabpage_list_wins(0), 2)
+eq(#vim.api.nvim_tabpage_list_wins(0), 3) -- header above list | preview
 local layout = vim.fn.winlayout()
-eq(layout[1], "row")
+eq({ layout[1], layout[2][2][1] }, { "col", "row" })
 eq(vim.api.nvim_win_get_width(list_win), 30)
 local function lines()
   return vim.api.nvim_buf_get_lines(list, 0, -1, false)
@@ -250,7 +250,7 @@ end, "refresh did not reload")
 vim.api.nvim_set_current_win(vim.fn.bufwinid(buf_named("folo://preview")))
 vim.cmd("FoloStarred")
 eq(vim.api.nvim_buf_get_name(0), "folo://timeline/starred")
-eq(#vim.api.nvim_tabpage_list_wins(0), 2)
+eq(#vim.api.nvim_tabpage_list_wins(0), 3)
 wait_preview("# saved")
 
 -- Picker and prefix names.
@@ -356,10 +356,10 @@ press("gx")
 eq(opened, { "https://x/c1", "https://x/c2", "https://x/c3" })
 eq(vim.api.nvim_buf_get_lines(many, 0, 1, false)[1]:sub(1, 1), " ")
 
--- List q closes both windows' view and an open help popup.
+-- List q closes the preview and an open help popup, leaving header + dashboard.
 press("?")
-eq(#vim.api.nvim_tabpage_list_wins(0), 3)
+eq(#vim.api.nvim_tabpage_list_wins(0), 4)
 press("q")
-eq(#vim.api.nvim_tabpage_list_wins(0), 1)
+eq(#vim.api.nvim_tabpage_list_wins(0), 2)
 
 print("ok")

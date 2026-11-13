@@ -63,8 +63,24 @@ eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true)
 eq(vim.t.tabname, "Folo Dashboard")
 local tabs = #vim.api.nvim_list_tabpages()
 eq(tabs, 2)
-local head = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
-assert(head:find("\u{e0b6} Timeline (t) \u{e0b4}", 1, true), head)
+-- The header is a one-line window spanning the top; the active panel's badge is filled.
+local function header()
+  local hbuf = vim.fn.bufnr("folo://header")
+  local hwin = vim.fn.bufwinid(hbuf)
+  assert(hwin ~= -1, "no header window")
+  eq(vim.fn.winlayout()[2][1], { "leaf", hwin }) -- topmost in the column
+  eq(vim.api.nvim_win_get_width(hwin), vim.o.columns)
+  local active = {}
+  for _, m in ipairs(vim.api.nvim_buf_get_extmarks(hbuf, -1, 0, -1, { details = true })) do
+    if m[4].hl_group:find("^FoloBadgeOn") then
+      table.insert(active, vim.api.nvim_buf_get_text(hbuf, m[2], m[3], m[2], m[4].end_col, {})[1])
+    end
+  end
+  return vim.api.nvim_buf_get_lines(hbuf, 0, 1, false)[1], active
+end
+local head, active = header()
+assert(head:find("\u{e0b6} Timeline (T) \u{e0b4}", 1, true), head)
+eq(active, { " Dashboard (D) " })
 
 -- Groups by count desc, feeds by count desc, empty category last here.
 local news, ai_row, big, small, loose = find_line("News  "), find_line("AI  "), find_line("Big"), find_line("Small"), find_line("Uncategorized")
@@ -86,9 +102,10 @@ eq(vim.t.folo_dashboard, true)
 wait(function()
   return vim.bo.filetype == "folo-timeline"
 end, "list not shown")
+eq(select(2, header()), { " Unread (U) " })
 press("q")
 eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true)
-eq(#vim.api.nvim_tabpage_list_wins(0), 1)
+eq(#vim.api.nvim_tabpage_list_wins(0), 2) -- header + dashboard
 
 -- From another tab, :Folo jumps back instead of making a new tab.
 vim.cmd("tabprevious")
@@ -105,6 +122,27 @@ press("<CR>")
 wait(function()
   return logged("--category News")
 end, "category timeline not requested")
+
+-- Commands from another tab land in the Folo tab, replacing the panel.
+vim.cmd("tabnext 1")
+vim.cmd("FoloStarred")
+eq(#vim.api.nvim_list_tabpages(), tabs)
+eq(vim.t.folo_dashboard, true)
+wait(function()
+  return vim.bo.filetype == "folo-timeline" and vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:find("saved", 1, true)
+end, "starred not shown")
+eq(select(2, header()), { " Starred (*) " })
+eq(#vim.api.nvim_tabpage_list_wins(0), 3) -- header + list + preview
+-- Nav keys work from the preview too; the list replaces the panel, the preview stays.
+vim.api.nvim_set_current_win(vim.fn.bufwinid(vim.fn.bufnr("folo://preview")))
+press("T")
+eq(vim.api.nvim_buf_get_name(0), "folo://timeline/all")
+eq(#vim.api.nvim_tabpage_list_wins(0), 3)
+press("D")
+eq(#vim.api.nvim_tabpage_list_wins(0), 2)
+eq(vim.t.folo_dashboard, true)
+eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true)
+eq(#vim.api.nvim_list_tabpages(), tabs)
 
 print("ok")
 vim.cmd("qa!")

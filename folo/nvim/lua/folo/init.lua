@@ -85,12 +85,10 @@ local defaults = {
       help = "?",
     },
     preview = { open_url = "gx", browser = "R", close = "q", help = "?" },
+    -- Header badges; mapped in the header and every panel, so they must not clash with list keys.
+    nav = { dashboard = "D", timeline = "T", unread = "U", starred = "*", category = "C" },
     dashboard = {
       open = "<CR>",
-      timeline = "t",
-      unread = "u",
-      starred = "s",
-      category = "c",
       refresh = "r",
       close = "q",
       help = "?",

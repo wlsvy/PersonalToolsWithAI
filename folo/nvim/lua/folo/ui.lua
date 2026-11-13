@@ -11,8 +11,11 @@ local STAR = "\u{f005}" -- nf-fa-star
 local ICON_NS = vim.api.nvim_create_namespace("folo_icons")
 local DASHBOARD_NAME = "Folo Dashboard"
 local DASHBOARD_NS = vim.api.nvim_create_namespace("folo_dashboard")
+local HEADER_NAME = "folo://header"
+local HEADER_NS = vim.api.nvim_create_namespace("folo_header")
 -- Kept here: a name without a scheme is stored as a full path, so find_buf cannot match it.
 local dashboard_buf
+local header_buf
 
 -- Per-list state, keyed by bufnr.
 local state = {}
@@ -375,7 +378,7 @@ local HELP = {
       { "delete_summary", "Delete the entry's summary file" },
       { "next_page", "Load the next page" },
       { "refresh", "Reload from the first page" },
-      { "close", "Close the list and preview" },
+      { "close", "Close the list and go to the dashboard" },
       { "help", "Toggle this help" },
     },
   },
@@ -384,10 +387,6 @@ local HELP = {
     notes = { "Counts are unread entries in the configured view." },
     keys = {
       { "open", "Open unread entries of the category or feed" },
-      { "timeline", "Open the whole timeline" },
-      { "unread", "Open all unread entries" },
-      { "starred", "Open collected entries" },
-      { "category", "Pick a category" },
       { "refresh", "Reload the counts" },
       { "close", "Close the dashboard tab" },
       { "help", "Toggle this help" },
@@ -602,7 +601,10 @@ local function focus_list()
   end
 end
 
+local map_nav
+
 local function setup_preview_keys(cfg)
+  map_nav(preview_buf())
   map(preview_buf(), cfg.keymaps.preview, {
     open_url = function()
       if preview.entry then
@@ -617,21 +619,188 @@ local function setup_preview_keys(cfg)
   })
 end
 
--- A command run from the preview must not replace it with the list.
-local function leave_preview()
-  if vim.api.nvim_get_current_win() == preview_win() then
-    vim.cmd("wincmd p")
-    if vim.api.nvim_get_current_win() == preview_win() then
-      vim.cmd("leftabove vsplit")
+-- Folo tab --------------------------------------------------------------
+-- One tab holds every panel: a one-line header of badges on top, the panel
+-- (dashboard or a list) below it, and the preview to the right of a list.
+
+local RIM_LEFT, RIM_RIGHT = "\u{e0b6}", "\u{e0b4}" -- nf-ple-left/right_half_circle_thick
+local ACCENT = "#61afef"
+
+local function darken(hex, f)
+  local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
+  if not r then
+    return hex
+  end
+  local function ch(c)
+    return math.floor(tonumber(c, 16) * f)
+  end
+  return ("#%02x%02x%02x"):format(ch(r), ch(g), ch(b))
+end
+
+-- Collects one line of text plus highlight spans in byte columns.
+local function line_builder()
+  local b = { text = "", spans = {} }
+  function b.add(text, group)
+    if group then
+      table.insert(b.spans, { col = #b.text, end_col = #b.text + #text, group = group })
+    end
+    b.text = b.text .. text
+  end
+  -- Rounded caps in the rim color around a darker body of the same hue; active fills it.
+  function b.badge(text, color, active)
+    local hex = color:sub(2)
+    local body = (active and "FoloBadgeOn" or "FoloBadge") .. hex
+    -- Set on every draw so a colorscheme change recovers.
+    vim.api.nvim_set_hl(0, "FoloRim" .. hex, { fg = color })
+    if active then
+      vim.api.nvim_set_hl(0, body, { fg = darken(color, 0.2), bg = color, bold = true })
+    else
+      vim.api.nvim_set_hl(0, body, { fg = color, bg = darken(color, 0.3), bold = true })
+    end
+    b.add(RIM_LEFT, "FoloRim" .. hex)
+    b.add(" " .. text .. " ", body)
+    b.add(RIM_RIGHT, "FoloRim" .. hex)
+  end
+  return b
+end
+
+local function draw_lines(buf, ns, built)
+  local lines = {}
+  for i, b in ipairs(built) do
+    lines[i] = b.text
+  end
+  set_lines(buf, lines)
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  for i, b in ipairs(built) do
+    for _, sp in ipairs(b.spans) do
+      vim.api.nvim_buf_set_extmark(buf, ns, i - 1, sp.col, { end_col = sp.end_col, hl_group = sp.group })
     end
   end
 end
 
--- opts: {unread=, category=, collection=}; title names the buffer.
+local NAV = {
+  { "dashboard", "Dashboard" },
+  { "timeline", "Timeline" },
+  { "unread", "Unread" },
+  { "starred", "Starred" },
+  { "category", "Category" },
+}
+
+local function draw_header()
+  if not (header_buf and vim.api.nvim_buf_is_valid(header_buf)) then
+    return
+  end
+  local cfg = require("folo").get_config()
+  local palette = cfg.icons.palette
+  local b = line_builder()
+  b.add(" ")
+  for i, item in ipairs(NAV) do
+    local key = cfg.keymaps.nav[item[1]]
+    if key then
+      b.add(" ")
+      local color = palette[(i - 1) % math.max(1, #palette) + 1] or ACCENT
+      b.badge(("%s (%s)"):format(item[2], key), color, vim.t.folo_panel == item[1])
+    end
+  end
+  draw_lines(header_buf, HEADER_NS, { b })
+end
+
+-- Nav keys work from the header and every panel.
+function map_nav(buf)
+  local cfg = require("folo").get_config()
+  -- M.* are defined further down; look them up at call time.
+  map(buf, cfg.keymaps.nav, {
+    dashboard = function()
+      M.dashboard()
+    end,
+    timeline = function()
+      M.timeline({}, "all")
+    end,
+    unread = function()
+      M.timeline({ unread = true }, "unread")
+    end,
+    starred = function()
+      M.starred()
+    end,
+    category = function()
+      M.pick_category()
+    end,
+  })
+end
+
+local function header_win()
+  local win = header_buf and vim.api.nvim_buf_is_valid(header_buf) and vim.fn.bufwinid(header_buf)
+  return win and win ~= -1 and win or nil
+end
+
+-- The panel window: any window of the tab that is neither the header nor the preview.
+local function main_win()
+  local skip = { [header_win() or 0] = true, [preview_win() or 0] = true }
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if not skip[win] and vim.api.nvim_win_get_config(win).relative == "" then
+      return win
+    end
+  end
+end
+
+-- Goes to the Folo tab (making it when missing), focuses the panel window and marks `panel` active.
+local function enter_tab(panel)
+  close_help()
+  local tab
+  for _, t in ipairs(vim.api.nvim_list_tabpages()) do
+    if vim.t[t].folo_dashboard then
+      tab = t
+    end
+  end
+  if tab then
+    vim.api.nvim_set_current_tabpage(tab)
+  else
+    vim.cmd("tabnew")
+    vim.bo.bufhidden = "wipe" -- the empty buffer goes away once a panel replaces it
+    vim.t.folo_dashboard = true
+    vim.t.tabname = DASHBOARD_NAME -- read by tabline plugins; the default tabline shows the buffer name
+  end
+  if not (header_buf and vim.api.nvim_buf_is_valid(header_buf)) then
+    header_buf = create_scratch(HEADER_NAME, "folo-header")
+    map_nav(header_buf)
+  end
+  if not header_win() then
+    local cur = vim.api.nvim_get_current_win()
+    vim.cmd("topleft 1split")
+    local win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, header_buf)
+    vim.wo[win].winfixheight = true
+    vim.wo[win].number = false
+    vim.wo[win].relativenumber = false
+    vim.wo[win].cursorline = false
+    vim.wo[win].wrap = false
+    vim.wo[win].signcolumn = "no"
+    vim.wo[win].foldcolumn = "0"
+    pcall(function()
+      vim.wo[win].winfixbuf = true -- 0.10+: keeps :e and friends out of the header
+    end)
+    vim.api.nvim_set_current_win(cur)
+  end
+  local win = main_win()
+  if not win then
+    vim.cmd("botright new")
+    win = vim.api.nvim_get_current_win()
+  end
+  vim.api.nvim_set_current_win(win)
+  vim.t.folo_panel = panel
+  draw_header()
+end
+
+
+local PANELS = { all = "timeline", unread = "unread", starred = "starred", category = "category" }
+
+-- opts: {unread=, category=, feed=, collection=}; title names the buffer, its first part the active badge.
 function M.timeline(opts, title)
   local cfg = require("folo").get_config()
-  leave_preview()
+  -- Runs from any window, the preview included; the list always lands in the panel window.
+  enter_tab(PANELS[title:match("^[^/]+")])
   local buf = create_scratch("folo://timeline/" .. title, "folo-timeline")
+  map_nav(buf)
   vim.api.nvim_set_current_buf(buf)
   vim.wo.wrap = false
   state[buf] = { items = {}, rows = {}, ids = {}, next = nil, loading = false }
@@ -881,18 +1050,9 @@ function M.timeline(opts, title)
       toggle_help("list")
     end,
     close = function()
-      close_help()
-      local win = preview_win()
-      if win and #vim.api.nvim_tabpage_list_wins(0) > 1 then
-        vim.api.nvim_win_close(win, true)
-      end
-      -- In the dashboard tab, land back on the dashboard rather than whatever buffer is alternate.
-      local dash = vim.t.folo_dashboard and dashboard_buf
-      if dash and vim.api.nvim_buf_is_valid(dash) and dash ~= buf then
-        vim.api.nvim_win_set_buf(0, dash)
+      M.dashboard()
+      if vim.api.nvim_buf_is_valid(buf) then
         vim.cmd("bdelete " .. buf)
-      else
-        vim.cmd("bdelete")
       end
     end,
   })
@@ -926,74 +1086,12 @@ end
 
 -- Dashboard -------------------------------------------------------------
 
-local RIM_LEFT, RIM_RIGHT = "\u{e0b6}", "\u{e0b4}" -- nf-ple-left/right_half_circle_thick
-local ACCENT = "#61afef"
-
-local function darken(hex, f)
-  local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
-  if not r then
-    return hex
-  end
-  local function ch(c)
-    return math.floor(tonumber(c, 16) * f)
-  end
-  return ("#%02x%02x%02x"):format(ch(r), ch(g), ch(b))
-end
-
--- Collects one line of text plus highlight spans in byte columns.
-local function line_builder()
-  local b = { text = "", spans = {} }
-  function b.add(text, group)
-    if group then
-      table.insert(b.spans, { col = #b.text, end_col = #b.text + #text, group = group })
-    end
-    b.text = b.text .. text
-  end
-  -- Rounded caps in the rim color around a darker body of the same hue.
-  function b.badge(text, color)
-    local hex = color:sub(2)
-    -- Set on every draw so a colorscheme change recovers.
-    vim.api.nvim_set_hl(0, "FoloRim" .. hex, { fg = color })
-    vim.api.nvim_set_hl(0, "FoloBadge" .. hex, { fg = color, bg = darken(color, 0.3), bold = true })
-    b.add(RIM_LEFT, "FoloRim" .. hex)
-    b.add(" " .. text .. " ", "FoloBadge" .. hex)
-    b.add(RIM_RIGHT, "FoloRim" .. hex)
-  end
-  return b
-end
-
-local BUTTONS = {
-  { "timeline", "Timeline" },
-  { "unread", "Unread" },
-  { "starred", "Starred" },
-  { "category", "Category" },
-  { "refresh", "Refresh" },
-  { "help", "Help" },
-}
-
 local function draw_dashboard(buf, data, err)
-  local cfg = require("folo").get_config()
-  local palette = cfg.icons.palette
   local built, rows = {}, {}
   local function push(b, row)
     table.insert(built, b)
     rows[#built] = row
   end
-
-  local head = line_builder()
-  head.add("  ")
-  head.badge("Folo", ACCENT)
-  local n = 0
-  for _, btn in ipairs(BUTTONS) do
-    local key = cfg.keymaps.dashboard[btn[1]]
-    if key then
-      n = n + 1
-      head.add("  ")
-      head.badge(("%s (%s)"):format(btn[2], key), palette[(n - 1) % math.max(1, #palette) + 1] or ACCENT)
-    end
-  end
-  push(head)
-  push(line_builder())
 
   if not data then
     local b = line_builder()
@@ -1046,17 +1144,7 @@ local function draw_dashboard(buf, data, err)
     end
   end
 
-  local lines = {}
-  for i, b in ipairs(built) do
-    lines[i] = b.text
-  end
-  set_lines(buf, lines)
-  vim.api.nvim_buf_clear_namespace(buf, DASHBOARD_NS, 0, -1)
-  for i, b in ipairs(built) do
-    for _, sp in ipairs(b.spans) do
-      vim.api.nvim_buf_set_extmark(buf, DASHBOARD_NS, i - 1, sp.col, { end_col = sp.end_col, hl_group = sp.group })
-    end
-  end
+  draw_lines(buf, DASHBOARD_NS, built)
   state[buf] = { rows = rows }
 end
 
@@ -1069,37 +1157,25 @@ local function refresh_dashboard(buf)
   end)
 end
 
--- Opens the dashboard in its own tab, reusing the tab when it exists.
+-- Shows the dashboard in the Folo tab's panel window.
 function M.dashboard()
   local cfg = require("folo").get_config()
-  close_help()
+  enter_tab("dashboard")
+  local win = preview_win()
+  if win then
+    vim.api.nvim_win_close(win, true)
+  end
   if not (dashboard_buf and vim.api.nvim_buf_is_valid(dashboard_buf)) then
     dashboard_buf = create_scratch(DASHBOARD_NAME, "folo-dashboard")
   end
   local buf = dashboard_buf
-  local tab
-  for _, t in ipairs(vim.api.nvim_list_tabpages()) do
-    if vim.t[t].folo_dashboard then
-      tab = t
-    end
-  end
-  if tab then
-    vim.api.nvim_set_current_tabpage(tab)
-    local win = preview_win()
-    if win and #vim.api.nvim_tabpage_list_wins(0) > 1 then
-      vim.api.nvim_win_close(win, true)
-    end
-    vim.api.nvim_win_set_buf(0, buf)
-  else
-    vim.cmd("tab sbuffer " .. buf)
-    vim.t.folo_dashboard = true
-    vim.t.tabname = DASHBOARD_NAME -- read by tabline plugins; the default tabline shows the buffer name
-  end
+  vim.api.nvim_win_set_buf(0, buf)
   vim.wo.wrap = false
   vim.wo.number = false
   vim.wo.relativenumber = false
   vim.wo.cursorline = true
 
+  map_nav(buf)
   map(buf, cfg.keymaps.dashboard, {
     open = function()
       local s = state[buf]
@@ -1113,14 +1189,6 @@ function M.dashboard()
         M.timeline({ unread = true, feed = row.feed }, "unread/feed/" .. row.title)
       end
     end,
-    timeline = function()
-      M.timeline({}, "all")
-    end,
-    unread = function()
-      M.timeline({ unread = true }, "unread")
-    end,
-    starred = M.starred,
-    category = M.pick_category,
     refresh = function()
       refresh_dashboard(buf)
     end,
@@ -1129,6 +1197,9 @@ function M.dashboard()
       if #vim.api.nvim_list_tabpages() > 1 then
         vim.cmd("tabclose")
       else
+        -- Last tab: drop the Folo layout and leave a plain window behind.
+        vim.t.folo_dashboard = nil
+        vim.cmd("only")
         vim.cmd("bdelete")
       end
     end,
