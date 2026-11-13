@@ -15,6 +15,8 @@ local HEADER_NAME = "folo://header"
 local HEADER_NS = vim.api.nvim_create_namespace("folo_header")
 -- Kept here: a name without a scheme is stored as a full path, so find_buf cannot match it.
 local dashboard_buf
+-- Dashboard rows live apart from `state`: everything in `state` is redrawn as a list.
+local dashboard_rows = {}
 local header_buf
 
 -- Per-list state, keyed by bufnr.
@@ -1120,7 +1122,7 @@ local function draw_dashboard(buf, data, err)
   end
 
   draw_lines(buf, DASHBOARD_NS, built)
-  state[buf] = { rows = rows }
+  dashboard_rows = rows
 end
 
 local function refresh_dashboard(buf)
@@ -1153,8 +1155,7 @@ function M.dashboard()
   map_nav(buf)
   map(buf, cfg.keymaps.dashboard, {
     open = function()
-      local s = state[buf]
-      local row = s and s.rows[vim.api.nvim_win_get_cursor(0)[1]]
+      local row = dashboard_rows[vim.api.nvim_win_get_cursor(0)[1]]
       if not row then
         return
       end
