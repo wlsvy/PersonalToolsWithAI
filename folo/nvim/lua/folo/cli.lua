@@ -91,13 +91,14 @@ local function list_page(args, cb)
   end)
 end
 
--- timeline({unread=, category=, cursor=}, cb(err, {entries=, next=}))
+-- timeline({unread=, category=, feed=, cursor=}, cb(err, {entries=, next=}))
 function M.timeline(opts, cb)
   local cfg = require("folo").get_config()
   local args = { "timeline" }
   add_flag(args, "--view", cfg.view)
   add_flag(args, "--limit", cfg.page_size)
   add_flag(args, "--category", opts.category)
+  add_flag(args, "--feed", opts.feed)
   add_flag(args, "--cursor", opts.cursor)
   if opts.unread then
     table.insert(args, "--unread-only")
@@ -142,6 +143,34 @@ function M.categories(cb)
     local names = vim.tbl_keys(seen)
     table.sort(names)
     cb(nil, names)
+  end)
+end
+
+local VIEWS = { articles = 0, social = 1, pictures = 2, videos = 3, audio = 4, notifications = 5 }
+
+-- unread(cb(err, {total=, items=})): subscriptions with unread entries in the configured view.
+-- items: { feed=, title=, category=, count= }; total counts only the kept items.
+function M.unread(cb)
+  local cfg = require("folo").get_config()
+  local view = cfg.view and (VIEWS[cfg.view] or tonumber(cfg.view))
+  M.run({ "unread", "list" }, function(err, data)
+    if err then
+      return cb(err)
+    end
+    local items, total = {}, 0
+    for _, it in ipairs(data.items or {}) do
+      if view == nil or it.view == view then
+        local count = tonumber(it.unreadCount) or 0
+        total = total + count
+        table.insert(items, {
+          feed = it.feedId or it.sourceId,
+          title = it.title or "",
+          category = it.category,
+          count = count,
+        })
+      end
+    end
+    cb(nil, { total = total, items = items })
   end)
 end
 

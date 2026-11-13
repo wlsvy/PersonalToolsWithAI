@@ -78,7 +78,7 @@ cli.entry = function(id, cb)
 end
 
 vim.cmd("source " .. dir .. "/../plugin/folo.lua")
-vim.cmd("Folo")
+require("folo.ui").timeline({}, "all")
 local list = vim.api.nvim_get_current_buf()
 local function lines()
   return vim.api.nvim_buf_get_lines(list, 0, -1, false)

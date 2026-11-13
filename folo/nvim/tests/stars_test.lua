@@ -72,7 +72,7 @@ assert(logged("--format json collection add 7"), "add argv")
 vim.cmd("source " .. dir .. "/../plugin/folo.lua")
 
 -- UI: S toggles the current entry; the row stays when unstarred.
-vim.cmd("Folo")
+require("folo.ui").timeline({}, "all")
 local list = vim.api.nvim_get_current_buf()
 local function lines()
   return vim.api.nvim_buf_get_lines(list, 0, -1, false)

@@ -144,7 +144,7 @@ local function move_to(row)
   vim.api.nvim_exec_autocmds("CursorMoved", { buffer = 0 })
 end
 
-vim.cmd("Folo")
+require("folo.ui").timeline({}, "all")
 local list = vim.api.nvim_get_current_buf()
 local list_win = vim.api.nvim_get_current_win()
 eq(vim.api.nvim_buf_get_name(list), "folo://timeline/all")

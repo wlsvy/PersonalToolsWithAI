@@ -10,6 +10,8 @@ case "$FAKE_FOLO_MODE" in
   slow) exec sleep 5 ;;
 esac
 case "$*" in
+  *"unread list"*)
+    echo '{"ok":true,"data":{"total":16,"items":[{"feedId":"f1","title":"Small","category":"AI","view":0,"unreadCount":2},{"feedId":"f2","title":"Big","category":"AI","view":0,"unreadCount":5},{"feedId":"f3","title":"Loose","category":null,"view":0,"unreadCount":1},{"feedId":"f4","title":"News feed","category":"News","view":0,"unreadCount":8},{"feedId":"f5","title":"Social","category":"News","view":1,"unreadCount":100}]},"error":null}' ;;
   *"subscription list"*)
     echo '{"ok":true,"data":{"subscriptions":[{"category":"News"},{"category":"AI"},{"category":null},{"category":"AI"},{}]},"error":null}' ;;
   *"collection add 404"*)

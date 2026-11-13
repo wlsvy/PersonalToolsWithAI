@@ -21,6 +21,7 @@ folo/
     lua/folo/render.lua  html -> text; own copy of the sample's module, not shared
     tests/cli_test.lua   headless CLI-layer self-check using tests/fake_folo.sh
     tests/article_test.lua  article fetching and UI self-check
+    tests/dashboard_test.lua  dashboard tab self-check, see dashboard.ai.md
     tests/fake_folo.sh, fake_curl.sh, fake_browser.sh  fixtures
 ```
 
@@ -80,6 +81,7 @@ nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/cl
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/article_test.lua   # -> ok
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/icons_test.lua   # -> ok
 nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/stars_test.lua   # -> ok
+nvim --headless -i NONE -u NONE --cmd "set rtp+=folo/nvim" -l folo/nvim/tests/dashboard_test.lua   # -> ok
 ```
 - Test covers: parsing, read fallback, argv (no `--token`), UNAUTHORIZED, non-zero exit, invalid JSON, timeout, missing executable, CLI parsing and failures here; UI in `article_test.lua`.
 - Manual, run by the user because the sandbox denies `~/.folo` and other home paths: `:Folo`, cursor move, `<CR>`, `m`, `]p`, `<Tab>`, `gx`, `R`.

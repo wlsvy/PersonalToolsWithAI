@@ -85,6 +85,16 @@ local defaults = {
       help = "?",
     },
     preview = { open_url = "gx", browser = "R", close = "q", help = "?" },
+    dashboard = {
+      open = "<CR>",
+      timeline = "t",
+      unread = "u",
+      starred = "s",
+      category = "c",
+      refresh = "r",
+      close = "q",
+      help = "?",
+    },
   },
 }
 

@@ -9,6 +9,10 @@ local M = {}
 local PREVIEW_NAME = "folo://preview"
 local STAR = "\u{f005}" -- nf-fa-star
 local ICON_NS = vim.api.nvim_create_namespace("folo_icons")
+local DASHBOARD_NAME = "Folo Dashboard"
+local DASHBOARD_NS = vim.api.nvim_create_namespace("folo_dashboard")
+-- Kept here: a name without a scheme is stored as a full path, so find_buf cannot match it.
+local dashboard_buf
 
 -- Per-list state, keyed by bufnr.
 local state = {}
@@ -375,6 +379,20 @@ local HELP = {
       { "help", "Toggle this help" },
     },
   },
+  dashboard = {
+    title = " Folo dashboard ",
+    notes = { "Counts are unread entries in the configured view." },
+    keys = {
+      { "open", "Open unread entries of the category or feed" },
+      { "timeline", "Open the whole timeline" },
+      { "unread", "Open all unread entries" },
+      { "starred", "Open collected entries" },
+      { "category", "Pick a category" },
+      { "refresh", "Reload the counts" },
+      { "close", "Close the dashboard tab" },
+      { "help", "Toggle this help" },
+    },
+  },
   preview = {
     title = " Folo preview ",
     notes = { "Short feed bodies get the article appended (Folo, then curl)." },
@@ -659,7 +677,7 @@ function M.timeline(opts, title)
     if opts.collection then
       cli.collection({ cursor = cursor }, on_page)
     else
-      cli.timeline({ unread = opts.unread, category = opts.category, cursor = cursor }, on_page)
+      cli.timeline({ unread = opts.unread, category = opts.category, feed = opts.feed, cursor = cursor }, on_page)
     end
   end
 
@@ -868,7 +886,14 @@ function M.timeline(opts, title)
       if win and #vim.api.nvim_tabpage_list_wins(0) > 1 then
         vim.api.nvim_win_close(win, true)
       end
-      vim.cmd("bdelete")
+      -- In the dashboard tab, land back on the dashboard rather than whatever buffer is alternate.
+      local dash = vim.t.folo_dashboard and dashboard_buf
+      if dash and vim.api.nvim_buf_is_valid(dash) and dash ~= buf then
+        vim.api.nvim_win_set_buf(0, dash)
+        vim.cmd("bdelete " .. buf)
+      else
+        vim.cmd("bdelete")
+      end
     end,
   })
   load_page(nil)
@@ -897,6 +922,221 @@ end
 
 function M.starred()
   M.timeline({ collection = true }, "starred")
+end
+
+-- Dashboard -------------------------------------------------------------
+
+local RIM_LEFT, RIM_RIGHT = "\u{e0b6}", "\u{e0b4}" -- nf-ple-left/right_half_circle_thick
+local ACCENT = "#61afef"
+
+local function darken(hex, f)
+  local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
+  if not r then
+    return hex
+  end
+  local function ch(c)
+    return math.floor(tonumber(c, 16) * f)
+  end
+  return ("#%02x%02x%02x"):format(ch(r), ch(g), ch(b))
+end
+
+-- Collects one line of text plus highlight spans in byte columns.
+local function line_builder()
+  local b = { text = "", spans = {} }
+  function b.add(text, group)
+    if group then
+      table.insert(b.spans, { col = #b.text, end_col = #b.text + #text, group = group })
+    end
+    b.text = b.text .. text
+  end
+  -- Rounded caps in the rim color around a darker body of the same hue.
+  function b.badge(text, color)
+    local hex = color:sub(2)
+    -- Set on every draw so a colorscheme change recovers.
+    vim.api.nvim_set_hl(0, "FoloRim" .. hex, { fg = color })
+    vim.api.nvim_set_hl(0, "FoloBadge" .. hex, { fg = color, bg = darken(color, 0.3), bold = true })
+    b.add(RIM_LEFT, "FoloRim" .. hex)
+    b.add(" " .. text .. " ", "FoloBadge" .. hex)
+    b.add(RIM_RIGHT, "FoloRim" .. hex)
+  end
+  return b
+end
+
+local BUTTONS = {
+  { "timeline", "Timeline" },
+  { "unread", "Unread" },
+  { "starred", "Starred" },
+  { "category", "Category" },
+  { "refresh", "Refresh" },
+  { "help", "Help" },
+}
+
+local function draw_dashboard(buf, data, err)
+  local cfg = require("folo").get_config()
+  local palette = cfg.icons.palette
+  local built, rows = {}, {}
+  local function push(b, row)
+    table.insert(built, b)
+    rows[#built] = row
+  end
+
+  local head = line_builder()
+  head.add("  ")
+  head.badge("Folo", ACCENT)
+  local n = 0
+  for _, btn in ipairs(BUTTONS) do
+    local key = cfg.keymaps.dashboard[btn[1]]
+    if key then
+      n = n + 1
+      head.add("  ")
+      head.badge(("%s (%s)"):format(btn[2], key), palette[(n - 1) % math.max(1, #palette) + 1] or ACCENT)
+    end
+  end
+  push(head)
+  push(line_builder())
+
+  if not data then
+    local b = line_builder()
+    b.add("  " .. (err and ("Error: " .. err) or "Loading…"), err and "ErrorMsg" or "Comment")
+    push(b)
+  else
+    local total = line_builder()
+    total.add("  Unread  ", "Title")
+    total.badge(tostring(data.total), ACCENT)
+    push(total)
+
+    local groups, by_name = {}, {}
+    for _, it in ipairs(data.items) do
+      local name = (it.category and it.category ~= "") and it.category or nil
+      local g = by_name[name or ""]
+      if not g then
+        g = { name = name, count = 0, feeds = {} }
+        by_name[name or ""] = g
+        table.insert(groups, g)
+      end
+      g.count = g.count + it.count
+      table.insert(g.feeds, it)
+    end
+    local function by_count(a, b)
+      return a.count > b.count
+    end
+    table.sort(groups, by_count)
+    for _, g in ipairs(groups) do
+      table.sort(g.feeds, by_count)
+      push(line_builder())
+      local h = line_builder()
+      h.add("  " .. (g.name or "Uncategorized") .. "  ", "Title")
+      h.badge(tostring(g.count), ACCENT)
+      -- No CLI filter selects feeds without a category, so that header opens nothing.
+      push(h, g.name and { category = g.name } or nil)
+      for _, f in ipairs(g.feeds) do
+        local title = one_line(f.title)
+        local row = line_builder()
+        -- ponytail: fixed title column; long titles push the count right.
+        row.add("    " .. title .. (" "):rep(math.max(2, 50 - vim.fn.strdisplaywidth(title))))
+        row.add(tostring(f.count), "Number")
+        push(row, { feed = f.feed, title = title })
+      end
+    end
+    if #groups == 0 then
+      push(line_builder())
+      local b = line_builder()
+      b.add("  Nothing unread.", "Comment")
+      push(b)
+    end
+  end
+
+  local lines = {}
+  for i, b in ipairs(built) do
+    lines[i] = b.text
+  end
+  set_lines(buf, lines)
+  vim.api.nvim_buf_clear_namespace(buf, DASHBOARD_NS, 0, -1)
+  for i, b in ipairs(built) do
+    for _, sp in ipairs(b.spans) do
+      vim.api.nvim_buf_set_extmark(buf, DASHBOARD_NS, i - 1, sp.col, { end_col = sp.end_col, hl_group = sp.group })
+    end
+  end
+  state[buf] = { rows = rows }
+end
+
+local function refresh_dashboard(buf)
+  draw_dashboard(buf, nil)
+  cli.unread(function(err, data)
+    if vim.api.nvim_buf_is_valid(buf) then
+      draw_dashboard(buf, data, err)
+    end
+  end)
+end
+
+-- Opens the dashboard in its own tab, reusing the tab when it exists.
+function M.dashboard()
+  local cfg = require("folo").get_config()
+  close_help()
+  if not (dashboard_buf and vim.api.nvim_buf_is_valid(dashboard_buf)) then
+    dashboard_buf = create_scratch(DASHBOARD_NAME, "folo-dashboard")
+  end
+  local buf = dashboard_buf
+  local tab
+  for _, t in ipairs(vim.api.nvim_list_tabpages()) do
+    if vim.t[t].folo_dashboard then
+      tab = t
+    end
+  end
+  if tab then
+    vim.api.nvim_set_current_tabpage(tab)
+    local win = preview_win()
+    if win and #vim.api.nvim_tabpage_list_wins(0) > 1 then
+      vim.api.nvim_win_close(win, true)
+    end
+    vim.api.nvim_win_set_buf(0, buf)
+  else
+    vim.cmd("tab sbuffer " .. buf)
+    vim.t.folo_dashboard = true
+    vim.t.tabname = DASHBOARD_NAME -- read by tabline plugins; the default tabline shows the buffer name
+  end
+  vim.wo.wrap = false
+  vim.wo.number = false
+  vim.wo.relativenumber = false
+  vim.wo.cursorline = true
+
+  map(buf, cfg.keymaps.dashboard, {
+    open = function()
+      local s = state[buf]
+      local row = s and s.rows[vim.api.nvim_win_get_cursor(0)[1]]
+      if not row then
+        return
+      end
+      if row.category then
+        M.timeline({ unread = true, category = row.category }, "unread/category/" .. row.category)
+      else
+        M.timeline({ unread = true, feed = row.feed }, "unread/feed/" .. row.title)
+      end
+    end,
+    timeline = function()
+      M.timeline({}, "all")
+    end,
+    unread = function()
+      M.timeline({ unread = true }, "unread")
+    end,
+    starred = M.starred,
+    category = M.pick_category,
+    refresh = function()
+      refresh_dashboard(buf)
+    end,
+    close = function()
+      close_help()
+      if #vim.api.nvim_list_tabpages() > 1 then
+        vim.cmd("tabclose")
+      else
+        vim.cmd("bdelete")
+      end
+    end,
+    help = function()
+      toggle_help("dashboard")
+    end,
+  })
+  refresh_dashboard(buf)
 end
 
 return M

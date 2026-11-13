@@ -4,8 +4,8 @@ end
 vim.g.loaded_folo = true
 
 vim.api.nvim_create_user_command("Folo", function()
-  require("folo.ui").timeline({}, "all")
-end, { desc = "folo: timeline" })
+  require("folo.ui").dashboard()
+end, { desc = "folo: dashboard" })
 
 vim.api.nvim_create_user_command("FoloUnread", function()
   require("folo.ui").timeline({ unread = true }, "unread")
