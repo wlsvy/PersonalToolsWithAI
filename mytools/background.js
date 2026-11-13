@@ -23,11 +23,28 @@ const MENUS = {
   },
 };
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
+  const keys = await shortcuts();
   for (const [id, { title }] of Object.entries(MENUS)) {
-    chrome.contextMenus.create({ id, title, contexts: ['all'] });
+    chrome.contextMenus.create({ id, title: withKey(title, keys[id]), contexts: ['all'] });
   }
 });
+
+// ponytail: 단축키 변경 이벤트가 없어 브라우저 시작 때만 제목을 갱신한다
+chrome.runtime.onStartup.addListener(async () => {
+  const keys = await shortcuts();
+  for (const [id, { title }] of Object.entries(MENUS)) {
+    chrome.contextMenus.update(id, { title: withKey(title, keys[id]) });
+  }
+});
+
+// 명령 id → 사용자가 지정한 실제 단축키 (미지정이면 빈 문자열)
+async function shortcuts() {
+  const cmds = await chrome.commands.getAll();
+  return Object.fromEntries(cmds.map((c) => [c.name, c.shortcut]));
+}
+
+const withKey = (title, key) => (key ? `${title}  [${key}]` : title);
 
 // chrome:// 등 주입 불가 페이지에서는 실패하는데, 알릴 UI가 없어 무시한다
 chrome.contextMenus.onClicked.addListener((info, tab) => {
