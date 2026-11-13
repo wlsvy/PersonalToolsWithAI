@@ -16,6 +16,7 @@
 | `mytools/result/vendor/mermaid.min.js` | mermaid 12.2.0 (UMD, `globalThis.mermaid`, 5.5MB) |
 | `native-host/clip_host.mjs` | Native Messaging 호스트: `claude -p` 호출 |
 | `native-host/prompts/summary.md`, `translate.md` | 시스템 프롬프트 |
+| `native-host/prompts/sites/<키워드>.md` | 사이트별 요약 프롬프트 (`summary.md`를 통째로 대체) |
 | `native-host/install.sh` | macOS용 호스트 등록 JSON + node wrapper(`.sh`) 생성 |
 | `native-host/install.ps1` | Windows용 호스트 등록 JSON + node wrapper(`.cmd`) 생성 + 레지스트리 등록 |
 
@@ -31,7 +32,7 @@
     tabs.create(result/result.html?id=uuid)
 [result.js]
   storage.session[id] 읽기 (없으면 안내)
-  doc.summary 없으면 → sendNativeMessage({ action: 'summary', markdown })
+  doc.summary 없으면 → sendNativeMessage({ action: 'summary', url, markdown })
                       → 성공 시 doc.summary 저장 (새로고침해도 재요약 안 함)
   render(#summary, sourceLink(title, url) + doc.summary)   (링크는 저장하지 않고 표시·복사 때 붙임)
   [요약 Markdown 복사] → navigator.clipboard.writeText(링크 + doc.summary)
@@ -76,6 +77,7 @@
 - 호출: `claude -p --model <m> --system-prompt <prompts/*.md 내용> --tools '' --no-session-persistence --setting-sources '' --strict-mcp-config`, 본문은 stdin.
   - `spawnSync`의 `input` + `encoding: 'utf8'` (조각 단위로 이어 붙이면 멀티바이트가 깨질 수 있음), `maxBuffer` 16MB.
 - `--setting-sources '' --strict-mcp-config`: 기본 프로필 로그인을 그대로 쓰면서 전역 `~/.claude`의 CLAUDE.md·플러그인·hook·MCP가 출력에 섞이지 않게. 별도 `CLAUDE_CONFIG_DIR` 프로필은 로그인을 따로 해야 해서 쓰지 않는다.
+- 요약 프롬프트 선택(`summaryPrompt`): URL 호스트 이름을 `.`으로 나눈 조각 중 하나가 `prompts/sites/<키워드>.md`의 키워드와 같으면 그 파일을 `summary.md` 대신 쓴다(덧붙이지 않고 오버라이드). 예: `www.hankyung.com` → `sites/hankyung.md`. 조각 단위라 `nothankyung.com`은 안 맞는다. Folo nvim 플러그인은 URL을 보내지 않으므로 항상 `summary.md`.
 - `cwd: tmpdir()`: 이 저장소의 CLAUDE.md/.claude가 읽히지 않게.
 - `--tools ''`: 입력이 신뢰할 수 없는 웹 본문 → 프롬프트 인젝션 대비. 파일은 쓰지 않는다.
 - `--bare` 금지: `ANTHROPIC_API_KEY`/apiKeyHelper만 쓰고 OAuth·키체인을 읽지 않아 구독 로그인이 안 된다.

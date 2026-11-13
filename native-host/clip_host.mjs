@@ -1,7 +1,7 @@
 // Chrome Native Messaging 호스트. 확장이 보낸 본문을 claude -p로 요약·번역해 돌려준다.
 // Chrome이 Dock에서 실행되면 PATH가 /usr/bin:/bin 뿐이라 install.sh(Windows는 install.ps1)가 만든 wrapper가 node 절대 경로로 실행한다.
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,8 +55,23 @@ function ask(model, prompt, text) {
   return r.stdout.trim();
 }
 
+// prompts/sites/<키워드>.md가 있으면 summary.md 대신 쓴다(오버라이드).
+// 호스트 이름을 '.' 단위로 나눠 비교해 www.hankyung.com은 맞고 nothankyung.com은 안 맞게 한다.
+export function summaryPrompt(url) {
+  let labels;
+  try {
+    labels = new URL(url).hostname.split('.');
+  } catch {
+    return 'summary.md';
+  }
+  const key = readdirSync(join(HERE, 'prompts', 'sites'))
+    .map((f) => f.replace(/\.md$/, ''))
+    .find((k) => labels.includes(k));
+  return key ? join('sites', `${key}.md`) : 'summary.md';
+}
+
 function handle(msg) {
-  if (msg.action === 'summary') return { ok: true, text: ask('sonnet', 'summary.md', msg.markdown) };
+  if (msg.action === 'summary') return { ok: true, text: ask('sonnet', summaryPrompt(msg.url), msg.markdown) };
   if (msg.action === 'translate') return { ok: true, text: ask('sonnet', 'translate.md', msg.markdown) };
   return { ok: false, error: `unknown action: ${JSON.stringify(msg.action)}` };
 }

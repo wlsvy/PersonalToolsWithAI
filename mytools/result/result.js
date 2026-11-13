@@ -82,7 +82,7 @@ if (!doc) {
   // 새로고침마다 다시 요약하지 않도록 결과를 같은 키에 붙여 둔다
   if (!doc.summary) {
     setStatus('요약 중… (sonnet)', true);
-    const r = await ask({ action: 'summary', markdown: doc.markdown });
+    const r = await ask({ action: 'summary', url: doc.url, markdown: doc.markdown });
     if (r.ok) {
       doc.summary = r.text;
       await chrome.storage.session.set({ [key]: doc });
