@@ -12,7 +12,13 @@ export async function openSummary(tab, { active = true } = {}) {
 // 본문은 아직 없다 — 호출한 쪽이 key로 fillSummary()를 이어서 부른다.
 export function openSummaryPanel(tab) {
   const key = crypto.randomUUID();
-  chrome.sidePanel.setOptions({ tabId: tab.id, path: `result/result.html?id=${key}`, enabled: true });
+  const options = { path: `result/result.html?id=${key}`, enabled: true };
+  if (!tab) {
+    // Dia는 단축키에 tab을 넘기지 않는다. 탭을 await으로 찾으면 user gesture가 끊겨 현재 창에 바로 연다
+    chrome.sidePanel.setOptions(options);
+    return { key, opened: chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT }) };
+  }
+  chrome.sidePanel.setOptions({ ...options, tabId: tab.id });
   return { key, opened: chrome.sidePanel.open({ tabId: tab.id }) };
 }
 

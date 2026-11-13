@@ -18,6 +18,7 @@ const MENUS = {
     title: '요약·번역 (사이드 패널)',
     run: async (tab) => {
       const { key, opened } = openSummaryPanel(tab);
+      tab ??= (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
       await Promise.all([opened, fillSummary(key, tab)]);
     },
   },
@@ -52,8 +53,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // 단축키(manifest commands) → 같은 id의 메뉴 기능 실행
+// Dia는 tab을 넘기지 않으므로(undefined) 각 run이 처리한다
 chrome.commands.onCommand.addListener((command, tab) => {
-  MENUS[command]?.run(tab).catch(() => {});
+  MENUS[command]?.run(tab).catch((e) => console.error(command, e));
 });
 
 // popup [사이드 패널 요약]은 패널을 열면 닫히므로 추출은 여기 맡긴다
