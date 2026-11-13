@@ -34,6 +34,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   MENUS[info.menuItemId]?.run(tab).catch(() => {});
 });
 
+// 단축키(manifest commands) → 같은 id의 메뉴 기능 실행
+chrome.commands.onCommand.addListener((command, tab) => {
+  MENUS[command]?.run(tab).catch(() => {});
+});
+
 // popup [사이드 패널 요약]은 패널을 열면 닫히므로 추출은 여기 맡긴다
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'summary-panel') fillSummary(msg.key, msg.tab);

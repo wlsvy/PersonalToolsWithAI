@@ -18,6 +18,12 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "commands": {
+    "summary-panel": {
+      "suggested_key": { "default": "Alt+Shift+D" },
+      "description": "요약·번역 (사이드 패널)"
+    }
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "PersonalToolsWithAI"
