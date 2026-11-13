@@ -287,7 +287,7 @@ eq(#lines(), 4)
 vim.fn.mkdir(out, "p")
 vim.fn.writefile({ "# saved", "", "kept across restarts" }, ai.path("disk"))
 entries = { entry("disk") }
-vim.cmd("FoloCategory Fresh")
+require("folo.ui").timeline({ category = "Fresh" }, "category/Fresh")
 list = vim.api.nvim_get_current_buf()
 wait(function()
   return lines()[2] == "   └ summary"

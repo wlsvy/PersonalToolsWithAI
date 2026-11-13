@@ -14,7 +14,7 @@ Status: implemented. Test: `tests/dashboard_test.lua`. Other tests open the time
 
 ## ui.lua
 - Shared Folo tab (`enter_tab(panel)`): find the tab with `vim.t.folo_dashboard`, else `tabnew` (its empty buffer is `bufhidden=wipe`). Ensure a header window `topleft 1split` on `folo://header` (`winfixheight`, `winfixbuf` when available), then focus `main_win()` = the first non-float window that is neither header nor preview (`botright new` when none). Sets `vim.t.folo_panel` and redraws the header. `M.timeline` and `M.dashboard` start with it, so every command and nav key lands in that tab's panel window, the preview included.
-- Header: one badge per `keymaps.nav` entry (`dashboard D`, `timeline T`, `unread U`, `starred *`, `category C`); active panel uses `FoloBadgeOn<hex>` (filled). Panel of a list = first part of its title (`all` → timeline). `map_nav` maps them on the header, dashboard, every list and the preview.
+- Header: one badge per `keymaps.nav` entry (`dashboard D`, `timeline T`, `unread U`, `starred *`); active panel uses `FoloBadgeOn<hex>` (filled). Panel of a list = first part of its title (`all` → timeline). `map_nav` maps them on the header, dashboard, every list and the preview.
 - List `close`: `M.dashboard()` then `bdelete` the list. Dashboard `close`: `tabclose`; on the last tab clear `folo_dashboard`, `only`, `bdelete`.
 - `M.dashboard()`:
   - `enter_tab("dashboard")`, close the preview, show `dashboard_buf` in the panel window.
@@ -22,7 +22,7 @@ Status: implemented. Test: `tests/dashboard_test.lua`. Other tests open the time
   - Fetch `cli.unread`, then draw. Show `Loading…` line while waiting; errors → `notify_err`.
 - Layout:
   ```
-    Dashboard (D)   Timeline (T)   Unread (U)   Starred (*)   Category (C)     <- header window
+    Dashboard (D)   Timeline (T)   Unread (U)   Starred (*)     <- header window
 
     Unread  2690
 
@@ -38,7 +38,8 @@ Status: implemented. Test: `tests/dashboard_test.lua`. Other tests open the time
 - Dashboard keys (`keymaps.dashboard`): `open`, `refresh`, `close`, `help`. Navigation moved to `keymaps.nav`; the dashboard has no button row of its own.
 
 ## plugin/folo.lua
-- `:Folo` → `require("folo.ui").dashboard()`. Others unchanged.
+- `:Folo` → `require("folo.ui").dashboard()`.
+- `:FoloCategory`, `ui.category`, `ui.pick_category`, `cli.categories` removed: the dashboard's category rows replace them (unread only). `cli.timeline` keeps `--category`. Tests open category lists with `ui.timeline({ category = X }, "category/" .. X)`.
 
 ## Tests (`tests/fake_folo.sh`, new `tests/dashboard_test.lua`)
 - Fake `unread list` with two views and an item without category.

@@ -81,7 +81,7 @@ eq(icons.for_entry(result[2].entries[1]), "\u{f09b}")
 
 -- UI: the icon column is two cells and only the icon's bytes are colored, once per redraw.
 vim.cmd("source " .. dir .. "/../plugin/folo.lua")
-vim.cmd("FoloCategory News")
+require("folo.ui").timeline({ category = "News" }, "category/News")
 local list = vim.api.nvim_get_current_buf()
 local function row()
   return vim.api.nvim_buf_get_lines(list, 0, 1, false)[1] or ""

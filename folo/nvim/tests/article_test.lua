@@ -253,19 +253,10 @@ eq(vim.api.nvim_buf_get_name(0), "folo://timeline/starred")
 eq(#vim.api.nvim_tabpage_list_wins(0), 3)
 wait_preview("# saved")
 
--- Picker and prefix names.
-local offered
-vim.ui.select = function(items, _, on_choice)
-  offered = items
-  on_choice("News")
-end
-vim.cmd("FoloCategory")
-wait(function()
-  return vim.api.nvim_buf_get_name(0) == "folo://timeline/category/News"
-end, "picked category did not open")
-eq(offered, { "AI", "News" })
+-- Prefix names: "New" must not reuse the "News" buffer.
+require("folo.ui").timeline({ category = "News" }, "category/News")
 wait_preview("# news item")
-vim.cmd("FoloCategory New")
+require("folo.ui").timeline({ category = "New" }, "category/New")
 eq(vim.api.nvim_buf_get_name(0), "folo://timeline/category/New")
 assert(buf_named("folo://timeline/category/News"))
 
@@ -276,7 +267,7 @@ ui_cli.timeline = function(_, cb)
   cb(nil, { entries = { { id = "8", title = "folo readable", url = "https://x/8", feed = "F", published = "", read = true } } })
 end
 local curl_calls = #vim.fn.readfile(vim.env.FAKE_CURL_LOG)
-vim.cmd("FoloCategory Readable")
+require("folo.ui").timeline({ category = "Readable" }, "category/Readable")
 wait_preview("## Article (Folo)")
 wait_preview("LONGFOLO")
 eq(#vim.fn.readfile(vim.env.FAKE_CURL_LOG), curl_calls)
@@ -287,7 +278,7 @@ folo.config.article.auto_fetch = false
 ui_cli.timeline = function(_, cb)
   cb(nil, { entries = { { id = "2", title = "fresh", url = "https://x/fresh", feed = "F", published = "", read = true } } })
 end
-vim.cmd("FoloCategory NoAuto")
+require("folo.ui").timeline({ category = "NoAuto" }, "category/NoAuto")
 wait_preview("Could not load article")
 ui_cli.timeline = original
 folo.config.article.auto_fetch = true
@@ -336,7 +327,7 @@ ui_cli.timeline = function(_, cb)
   end
   cb(nil, { entries = entries })
 end
-vim.cmd("FoloCategory Many")
+require("folo.ui").timeline({ category = "Many" }, "category/Many")
 ui_cli.timeline = original
 local many = vim.api.nvim_get_current_buf()
 vim.api.nvim_win_set_cursor(0, { 1, 0 })

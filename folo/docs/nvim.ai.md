@@ -36,7 +36,6 @@ folo/
 - `timeline --category <name>`: exact, case-sensitive match; unknown name returns an empty list.
 - `collection list [--limit] [--cursor]` -> same shape as `timeline`.
 - `collection add <id> [--view]`, `collection remove <id>`.
-- `subscription list [--view] [--category]` -> `{subscriptions:[{category,...}]}`; `category` may be null.
 
 ## Config
 ```lua
@@ -59,7 +58,7 @@ folo/
 - Entry field names mapped in one normalize function in `cli.lua`; UI never reads raw CLI fields.
 
 ## Commands
-`:Folo` (timeline), `:FoloUnread` (`--unread-only`), `:FoloCategory [name]` (no argument: `vim.ui.select` over categories from `subscription list`), `:FoloStarred` (`collection list`).
+`:Folo` (dashboard, see [dashboard.ai.md](dashboard.ai.md)), `:FoloUnread` (`--unread-only`), `:FoloStarred` (`collection list`). Categories open from the dashboard; `:FoloCategory` was removed.
 
 ## UI rules
 - Layout, preview chain, selection and keymaps: [preview.ai.md](preview.ai.md).
@@ -73,7 +72,7 @@ folo/
 Subscription management, collection add/remove, OPML, search, mark-all-read, sync with `rss/server`, direct HTTP to `api.folo.is`, copying Folo code (AGPL).
 
 ## Personal config
-`~/.config/nvim/lua/plugins/folo.lua`: `dir` to `folo/nvim`, `cmd = { 'Folo', 'FoloUnread', 'FoloCategory', 'FoloStarred' }`.
+`~/.config/nvim/lua/plugins/folo.lua`: `dir` to `folo/nvim`, `cmd = { 'Folo', 'FoloUnread', 'FoloStarred' }`.
 
 ## Verify
 ```sh

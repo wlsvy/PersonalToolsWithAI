@@ -683,7 +683,6 @@ local NAV = {
   { "timeline", "Timeline" },
   { "unread", "Unread" },
   { "starred", "Starred" },
-  { "category", "Category" },
 }
 
 local function draw_header()
@@ -721,9 +720,6 @@ function map_nav(buf)
     end,
     starred = function()
       M.starred()
-    end,
-    category = function()
-      M.pick_category()
     end,
   })
 end
@@ -792,7 +788,7 @@ local function enter_tab(panel)
 end
 
 
-local PANELS = { all = "timeline", unread = "unread", starred = "starred", category = "category" }
+local PANELS = { all = "timeline", unread = "unread", starred = "starred" }
 
 -- opts: {unread=, category=, feed=, collection=}; title names the buffer, its first part the active badge.
 function M.timeline(opts, title)
@@ -1057,27 +1053,6 @@ function M.timeline(opts, title)
     end,
   })
   load_page(nil)
-end
-
-function M.category(name)
-  M.timeline({ category = name }, "category/" .. name)
-end
-
--- Lists the account's categories so names need not be remembered.
-function M.pick_category()
-  cli.categories(function(err, names)
-    if err then
-      return notify_err(err)
-    end
-    if #names == 0 then
-      return vim.notify("folo: no categories")
-    end
-    vim.ui.select(names, { prompt = "Folo category" }, function(name)
-      if name then
-        M.category(name)
-      end
-    end)
-  end)
 end
 
 function M.starred()

@@ -110,12 +110,4 @@ err = await(function(cb)
 end)
 assert(err:find("cannot run", 1, true), err)
 
--- Categories: unique, sorted, nulls dropped.
-folo.setup({ cmd = { dir .. "/fake_folo.sh" }, timeout_ms = 500 })
-local names
-err, names = await(function(cb)
-  cli.categories(cb)
-end)
-eq({ err, names }, { nil, { "AI", "News" } })
-
 print("ok")

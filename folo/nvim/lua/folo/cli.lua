@@ -125,27 +125,6 @@ function M.collection(opts, cb)
   end)
 end
 
--- categories(cb(err, names)): sorted unique category names of the subscriptions.
-function M.categories(cb)
-  local cfg = require("folo").get_config()
-  local args = { "subscription", "list" }
-  add_flag(args, "--view", cfg.view)
-  M.run(args, function(err, data)
-    if err then
-      return cb(err)
-    end
-    local seen = {}
-    for _, sub in ipairs(data.subscriptions or {}) do
-      if sub.category and sub.category ~= "" then
-        seen[sub.category] = true
-      end
-    end
-    local names = vim.tbl_keys(seen)
-    table.sort(names)
-    cb(nil, names)
-  end)
-end
-
 local VIEWS = { articles = 0, social = 1, pictures = 2, videos = 3, audio = 4, notifications = 5 }
 
 -- unread(cb(err, {total=, items=})): subscriptions with unread entries in the configured view.
