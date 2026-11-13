@@ -20,7 +20,7 @@
   },
   "commands": {
     "summary-panel": {
-      "suggested_key": { "default": "Alt+Shift+D" },
+      "suggested_key": { "default": "Alt+Shift+J" },
       "description": "요약·번역 (사이드 패널)"
     }
   },
