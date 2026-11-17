@@ -1,6 +1,7 @@
 import { toggleGrayscale } from './features/grayscale/grayscale.js';
 import { clipMarkdown, appendMarkdown } from './features/clip-markdown/clip-markdown.js';
 import { openSummary, openSummaryPanel, fillSummary } from './features/summarize/summarize.js';
+import { rememberClip } from './features/clip-history/clip-history.js';
 
 // 우클릭 메뉴 id → 제목, 실행 함수
 const MENUS = {
@@ -68,6 +69,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 // popup [사이드 패널 요약]은 패널을 열면 닫히므로 추출은 여기 맡긴다
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'summary-panel') fillSummary(msg.key, msg.tab);
+  if (msg.type === 'clip-history') rememberClip(msg.text);
 });
 
 // service worker에는 navigator.clipboard가 없어 offscreen 문서에서 쓴다
@@ -80,6 +82,7 @@ async function copyText(text, { append = false } = {}) {
   try {
     if (append) text = appendMarkdown(await chrome.runtime.sendMessage({ type: 'paste' }), text);
     await chrome.runtime.sendMessage({ type: 'copy', text });
+    await rememberClip(text);
   } finally {
     await chrome.offscreen.closeDocument();
   }

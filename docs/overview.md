@@ -34,6 +34,7 @@
 | 텍스트 치환 | 키워드 입력 → 정해둔 텍스트로 | [text-expander.md](features/text-expander.md) | [text-expander.ai.md](features/text-expander.ai.md) |
 | 본문 Markdown 복사 | 페이지 본문만 Markdown으로 복사 | [clip-markdown.md](features/clip-markdown.md) | [clip-markdown.ai.md](features/clip-markdown.ai.md) |
 | 요약·번역 | 글 요약 → 원하면 전문 번역 | [summarize.md](features/summarize.md) | [summarize.ai.md](features/summarize.ai.md) |
+| 클립보드 기록 | 최근 복사한 텍스트 5개를 popup에서 다시 복사합니다 | [clip-history.md](features/clip-history.md) | [clip-history.ai.md](features/clip-history.ai.md) |
 
 ## 폴더 구조
 
@@ -50,6 +51,7 @@ mytools/                    # chrome://extensions 에서 이 폴더를 로드
     ├── tab-list/
     ├── text-expander/      # content script
     ├── clip-markdown/      # (+ vendor/: Readability, turndown)
+    ├── clip-history/       # content script (copy/cut 감지)
     └── summarize/
 
 native-host/                # 확장 밖. Chrome이 실행하는 로컬 Node 스크립트
@@ -65,10 +67,10 @@ docs/
 | `activeTab`, `scripting` | 흑백, 본문 복사 | 현재 탭에 스크립트 주입 |
 | `host_permissions: <all_urls>` | 요약 (popup 탭 목록) | 활성 탭이 아닌 탭에 주입 |
 | `tabs` | 탭 목록, 요약 | 다른 탭의 제목·URL 읽기 |
-| `content_scripts: <all_urls>` | 텍스트 치환 | 모든 페이지 입력 감지 |
-| `clipboardRead`, `clipboardWrite`, `offscreen` | 텍스트 치환, 본문 복사 | 클립보드 읽기·쓰기 |
+| `content_scripts: <all_urls>` | 텍스트 치환, 클립보드 기록 | 모든 페이지 입력·복사 감지 |
+| `clipboardRead`, `clipboardWrite`, `offscreen` | 텍스트 치환, 본문 복사, 클립보드 기록 | 클립보드 읽기·쓰기 |
 | `contextMenus` | 흑백, 본문 복사, 요약 | 우클릭 메뉴 |
-| `storage` | 요약 | 결과 탭에 본문 넘기기 (`storage.session`, 메모리 전용) |
+| `storage` | 요약, 클립보드 기록 | 결과 탭에 본문 넘기기, 복사 기록 보관 (`storage.session`, 메모리 전용) |
 | `nativeMessaging` | 요약 | 로컬 호스트 호출 |
 | `sidePanel` | 요약 (사이드 패널) | 현재 탭 옆에 결과 페이지 표시 |
 

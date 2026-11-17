@@ -1,6 +1,7 @@
 // openSummary()가 storage.session에 둔 { title, url, markdown, words }만 쓴다. 원래 탭에는 접근하지 않는다.
 import { marked } from './vendor/marked.esm.js';
 import { sourceLink } from '../features/summarize/summarize.js';
+import { rememberClip } from '../features/clip-history/clip-history.js';
 
 const HOST = 'com.personaltools.clip';
 
@@ -114,6 +115,7 @@ let toastTimer;
 async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
+    await rememberClip(text);
     $('toast').textContent = `복사했습니다 (${text.length}자)`;
   } catch (e) {
     $('toast').textContent = `복사 실패: ${e.message}`;

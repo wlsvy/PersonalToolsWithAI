@@ -35,7 +35,8 @@
       ],
       "js": [
         "features/text-expander/snippets.js",
-        "features/text-expander/expander.js"
+        "features/text-expander/expander.js",
+        "features/clip-history/capture.js"
       ]
     }
   ],

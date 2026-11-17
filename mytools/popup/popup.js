@@ -2,6 +2,7 @@ import { toggleGrayscale } from '../features/grayscale/grayscale.js';
 import { listTabs } from '../features/tab-list/tab-list.js';
 import { clipMarkdown, appendMarkdown } from '../features/clip-markdown/clip-markdown.js';
 import { openSummary, openSummaryPanel } from '../features/summarize/summarize.js';
+import { recentClips, rememberClip } from '../features/clip-history/clip-history.js';
 
 const status = document.getElementById('status');
 
@@ -22,10 +23,14 @@ async function clip(append) {
   if (append) {
     const all = appendMarkdown(await navigator.clipboard.readText(), md);
     await navigator.clipboard.writeText(all);
+    await rememberClip(all);
+    renderHistory();
     status.textContent = `이어 붙였습니다 (+${md.length}자, 총 ${all.length}자).`;
     return;
   }
   await navigator.clipboard.writeText(md);
+  await rememberClip(md);
+  renderHistory();
   status.textContent = `복사했습니다 (${md.length}자).`;
 }
 document.getElementById('clip').addEventListener('click', () => clip(false));
@@ -58,6 +63,37 @@ document.getElementById('grayscale').addEventListener('click', async () => {
     status.textContent = '이 페이지에서는 사용할 수 없습니다.';
   }
 });
+
+// 다른 앱에서 복사한 것은 이벤트로 잡을 수 없어, popup을 열 때 현재 클립보드를 기록한다
+try {
+  await rememberClip(await navigator.clipboard.readText());
+} catch {
+  // 포커스를 잃는 등으로 읽기가 실패하면 기존 기록만 보여 준다
+}
+const history = document.getElementById('history');
+async function renderHistory() {
+  const items = await recentClips();
+  history.replaceChildren(...items.map((text) => {
+    const li = document.createElement('li');
+    const t = document.createElement('div');
+    const btn = document.createElement('button');
+    t.className = 'text clip';
+    t.textContent = text;
+    t.title = text.slice(0, 500);
+    btn.type = 'button';
+    btn.textContent = '복사';
+    btn.setAttribute('aria-label', `복사: ${text.slice(0, 40)}`);
+    btn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(text);
+      await rememberClip(text);
+      status.textContent = `복사했습니다 (${text.length}자).`;
+      renderHistory();
+    });
+    li.append(t, btn);
+    return li;
+  }));
+}
+await renderHistory();
 
 // 페이지 제목/URL은 외부 데이터라 textContent로만 넣는다
 const list = document.getElementById('tabs');

@@ -63,6 +63,8 @@
     li:hover { background: var(--bg); }
     .title { font-weight: 500; }
     .url { color: var(--muted); font-size: 11px; }
+    .clip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+    #history:empty { display: none; }
     .title, .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
   <script type="module" src="popup.js"></script>
@@ -92,6 +94,9 @@
     </button>
   </div>
   <p id="status" role="status"></p>
+
+  <h2>클립보드 기록</h2>
+  <ul id="history"></ul>
 
   <h2>열린 탭</h2>
   <ul id="tabs"></ul>
