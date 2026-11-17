@@ -163,9 +163,39 @@ vim.ui.open = function(url)
   return nil, nil
 end
 vim.api.nvim_win_set_cursor(0, { alice, 0 })
-press("<CR>")
+press("gx")
 vim.ui.open = real_open
 eq(opened, "https://mail.google.com/mail/u/0/#all/m1")
+
+-- <CR> shows the body beside the dashboard: text/plain wins, base64url and CRLF decoded.
+local function preview_lines()
+  return vim.api.nvim_buf_get_lines(vim.fn.bufnr("folo://preview"), 0, -1, false)
+end
+local function preview_has(text)
+  for _, l in ipairs(preview_lines()) do
+    if l:find(text, 1, true) then
+      return true
+    end
+  end
+end
+press("<CR>")
+wait(function()
+  return preview_has("Plain body ??")
+end, "mail body not shown")
+assert(preview_has("# Lunch on Friday?") and preview_has("second line") and not preview_has("HTML body"), vim.inspect(preview_lines()))
+assert(preview_has("#all/m1"), "mail URL in the preview header")
+eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true) -- focus stays on the dashboard
+-- HTML-only part in EUC-KR is converted and rendered; attachments are listed by name.
+vim.api.nvim_win_set_cursor(0, { find_line("Report"), 0 })
+press("<CR>")
+wait(function()
+  return preview_has("보고서 첨부합니다")
+end, "euc-kr html body not decoded")
+assert(preview_has("Attachments: report.pdf"), vim.inspect(preview_lines()))
+-- q in the preview returns to the dashboard.
+vim.api.nvim_set_current_win(vim.fn.bufwinid(vim.fn.bufnr("folo://preview")))
+press("q")
+eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true)
 
 -- A gws failure shows in the Mail section only; the feeds still draw.
 vim.env.FAKE_GWS_MODE = "auth"

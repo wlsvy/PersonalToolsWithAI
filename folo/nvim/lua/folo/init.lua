@@ -97,6 +97,7 @@ local defaults = {
     nav = { dashboard = "D", timeline = "T", unread = "U", starred = "*" },
     dashboard = {
       open = "<CR>",
+      open_url = "gx",
       refresh = "r",
       close = "q",
       help = "?",

@@ -245,7 +245,8 @@ end
 
 local function render_in_browser()
   local e = preview.entry
-  if not e then
+  -- Gmail pages need a login the empty browser profile lacks.
+  if not e or e.mail then
     return
   end
   local wanted = next_generation()
@@ -388,7 +389,8 @@ local HELP = {
     title = " Folo dashboard ",
     notes = { "Counts are unread entries in the configured view." },
     keys = {
-      { "open", "Open unread entries of the category or feed, or the mail in Gmail" },
+      { "open", "Open unread entries of the category or feed, or show the mail body" },
+      { "open_url", "Open the mail under the cursor in Gmail" },
       { "refresh", "Reload the counts" },
       { "close", "Close the dashboard tab" },
       { "help", "Toggle this help" },
@@ -1177,6 +1179,31 @@ local function refresh_dashboard(buf)
   end
 end
 
+-- Shows a message body in the preview beside the dashboard; the mailbox is not changed.
+local function show_mail(buf, id)
+  local cfg = require("folo").get_config()
+  ensure_preview_win(cfg)
+  setup_preview_keys(cfg)
+  local wanted = next_generation()
+  local e = { id = "mail:" .. id, mail = true, title = "", url = cfg.gmail.url:format(id), feed = "", published = "" }
+  preview.list, preview.entry, preview.child = buf, e, false
+  draw_preview({ entry = e, status = "Loading…" })
+  require("folo.gmail").message(id, function(err, msg)
+    if not wanted() then
+      return
+    end
+    if err then
+      return draw_preview({ entry = e, status = "Error: " .. err })
+    end
+    e.title, e.feed, e.published = msg.subject, msg.from, msg.date
+    local body = msg.text
+    if #msg.attachments > 0 then
+      body = vim.list_extend(vim.list_extend({}, body), { "", "---", "Attachments: " .. table.concat(msg.attachments, ", ") })
+    end
+    draw_preview({ entry = e, body = body })
+  end)
+end
+
 -- Shows the dashboard in the Folo tab's panel window.
 function M.dashboard()
   local cfg = require("folo").get_config()
@@ -1203,14 +1230,20 @@ function M.dashboard()
         return
       end
       if row.mail then
-        local _, err = vim.ui.open(cfg.gmail.url:format(row.mail))
-        if err then
-          notify_err(err)
-        end
+        show_mail(buf, row.mail)
       elseif row.category then
         M.timeline({ unread = true, category = row.category }, "unread/category/" .. row.category)
       else
         M.timeline({ unread = true, feed = row.feed }, "unread/feed/" .. row.title)
+      end
+    end,
+    open_url = function()
+      local row = dashboard_rows[vim.api.nvim_win_get_cursor(0)[1]]
+      if row and row.mail then
+        local _, err = vim.ui.open(cfg.gmail.url:format(row.mail))
+        if err then
+          notify_err(err)
+        end
       end
     end,
     refresh = function()
