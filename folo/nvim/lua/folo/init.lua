@@ -69,6 +69,14 @@ local defaults = {
     confirm_over = 10, -- confirm before queueing more entries than this
     dir = nil, -- default stdpath("cache")/folo/summaries
   },
+  -- Dashboard Mail section via the gws CLI; see folo/docs/gmail.ai.md.
+  gmail = {
+    enabled = false,
+    cmd = { "gws" }, -- argv prefix
+    max = 10, -- messages listed
+    query = nil, -- Gmail search; nil = gws default (is:unread)
+    url = "https://mail.google.com/mail/u/0/#all/%s", -- %s = message id; u/N picks the account
+  },
   keymaps = {
     list = {
       open = "<CR>",

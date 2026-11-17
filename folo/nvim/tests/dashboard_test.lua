@@ -87,6 +87,7 @@ local news, ai_row, big, small, loose = find_line("News  "), find_line("AI  "), 
 assert(news < ai_row and ai_row < big and big < small and small < loose, vim.inspect({ news, ai_row, big, small, loose }))
 assert(not find_line("Social"), "other view leaked in")
 assert(find_line("Unread  \u{e0b6} 16 \u{e0b4}"), "total badge")
+assert(not find_line("Mail"), "Mail section shown while gmail is off")
 
 -- <CR> on a feed opens its unread entries in the dashboard tab.
 vim.api.nvim_win_set_cursor(0, { big, 0 })
@@ -143,6 +144,41 @@ eq(#vim.api.nvim_tabpage_list_wins(0), 2)
 eq(vim.t.folo_dashboard, true)
 eq(vim.api.nvim_buf_get_name(0):match("Folo Dashboard$") ~= nil, true)
 eq(#vim.api.nvim_list_tabpages(), tabs)
+
+-- Mail section: gws output above the feeds; <CR> opens the message in Gmail.
+folo.get_config().gmail = vim.tbl_extend("force", folo.get_config().gmail, { enabled = true, cmd = { dir .. "/fake_gws.sh" }, max = 2 })
+press("r")
+wait(function()
+  return find_line("Report") and find_line("Uncategorized")
+end, "mail did not draw")
+assert(logged("gmail +triage --format json --max 2"), "gws argv")
+assert(find_line("Mail  \u{e0b6} 42 \u{e0b4}") < find_line("Unread  "), "Mail above the feeds")
+local alice = find_line("Alice Kim")
+assert(not vim.api.nvim_buf_get_lines(0, alice - 1, alice, false)[1]:find("alice@", 1, true), "address not stripped")
+assert(find_line("Lunch on Friday?  17 Nov"), "subject one line + short date")
+local opened
+local real_open = vim.ui.open
+vim.ui.open = function(url)
+  opened = url
+  return nil, nil
+end
+vim.api.nvim_win_set_cursor(0, { alice, 0 })
+press("<CR>")
+vim.ui.open = real_open
+eq(opened, "https://mail.google.com/mail/u/0/#all/m1")
+
+-- A gws failure shows in the Mail section only; the feeds still draw.
+vim.env.FAKE_GWS_MODE = "auth"
+press("r")
+wait(function()
+  return find_line("gws auth login") and find_line("Uncategorized")
+end, "auth error not shown")
+assert(find_line("Error: Gmail auth failed: No credentials found (run `gws auth login`"), "auth hint")
+vim.env.FAKE_GWS_MODE = "empty"
+press("r")
+wait(function()
+  return find_line("No unread mail.")
+end, "empty inbox")
 
 print("ok")
 vim.cmd("qa!")

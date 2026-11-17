@@ -388,7 +388,7 @@ local HELP = {
     title = " Folo dashboard ",
     notes = { "Counts are unread entries in the configured view." },
     keys = {
-      { "open", "Open unread entries of the category or feed" },
+      { "open", "Open unread entries of the category or feed, or the mail in Gmail" },
       { "refresh", "Reload the counts" },
       { "close", "Close the dashboard tab" },
       { "help", "Toggle this help" },
@@ -1063,17 +1063,48 @@ end
 
 -- Dashboard -------------------------------------------------------------
 
-local function draw_dashboard(buf, data, err)
+-- feeds and mail are { data =, err = }, empty while loading; mail is nil when Gmail is off.
+local function draw_dashboard(buf, feeds, mail)
   local built, rows = {}, {}
   local function push(b, row)
     table.insert(built, b)
     rows[#built] = row
   end
-
-  if not data then
+  local function status(err)
     local b = line_builder()
     b.add("  " .. (err and ("Error: " .. err) or "Loading…"), err and "ErrorMsg" or "Comment")
     push(b)
+  end
+
+  if mail then
+    local h = line_builder()
+    h.add("  Mail  ", "Title")
+    if mail.data then
+      h.badge(tostring(mail.data.total), ACCENT)
+    end
+    push(h)
+    if not mail.data then
+      status(mail.err)
+    elseif #mail.data.messages == 0 then
+      local b = line_builder()
+      b.add("    No unread mail.", "Comment")
+      push(b)
+    end
+    for _, m in ipairs(mail.data and mail.data.messages or {}) do
+      local from = one_line(m.from)
+      local row = line_builder()
+      -- shortcut: fixed sender column like feed rows; long names push the subject right.
+      row.add("    " .. from .. (" "):rep(math.max(2, 24 - vim.fn.strdisplaywidth(from))))
+      row.add(one_line(m.subject) .. "  ")
+      row.add(m.date, "Comment")
+      push(row, { mail = m.id })
+    end
+    push(line_builder())
+  end
+
+  local data = feeds.data
+  if not data then
+    status(feeds.err)
   else
     local total = line_builder()
     total.add("  Unread  ", "Title")
@@ -1126,12 +1157,24 @@ local function draw_dashboard(buf, data, err)
 end
 
 local function refresh_dashboard(buf)
-  draw_dashboard(buf, nil)
-  cli.unread(function(err, data)
+  local feeds, mail = {}, require("folo").get_config().gmail.enabled and {} or nil
+  local function redraw()
     if vim.api.nvim_buf_is_valid(buf) then
-      draw_dashboard(buf, data, err)
+      draw_dashboard(buf, feeds, mail)
     end
+  end
+  redraw()
+  -- Both load in parallel; each redraws on arrival so one failing never hides the other.
+  cli.unread(function(err, data)
+    feeds.err, feeds.data = err, data
+    redraw()
   end)
+  if mail then
+    require("folo.gmail").triage(function(err, data)
+      mail.err, mail.data = err, data
+      redraw()
+    end)
+  end
 end
 
 -- Shows the dashboard in the Folo tab's panel window.
@@ -1159,7 +1202,12 @@ function M.dashboard()
       if not row then
         return
       end
-      if row.category then
+      if row.mail then
+        local _, err = vim.ui.open(cfg.gmail.url:format(row.mail))
+        if err then
+          notify_err(err)
+        end
+      elseif row.category then
         M.timeline({ unread = true, category = row.category }, "unread/category/" .. row.category)
       else
         M.timeline({ unread = true, feed = row.feed }, "unread/feed/" .. row.title)

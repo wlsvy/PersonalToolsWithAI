@@ -87,6 +87,27 @@ AI 요약과 번역은 큐로 처리하며 기본 3개까지 동시에 실행합
 
 본문 변환에는 pandoc을 쓰고, 없으면 태그만 제거합니다.
 
+### Gmail
+
+대시보드 맨 위에 안 읽은 Gmail 메일을 보여 줄 수 있습니다. 메일 줄에서 `<CR>`을 누르면 브라우저의 Gmail에서 그 메일을 엽니다. 읽기 전용이라 메일함은 바꾸지 않습니다. 설계는 [docs/gmail.md](docs/gmail.md)에 있습니다.
+
+```sh
+brew install gws
+gws auth setup   # Google Cloud 프로젝트와 OAuth 클라이언트를 만듭니다.
+gws auth login
+```
+
+```lua
+opts = {
+  gmail = {
+    enabled = true,
+    max = 10, -- 보여 줄 메일 수
+    query = nil, -- Gmail 검색어, 기본은 is:unread
+    url = "https://mail.google.com/mail/u/0/#all/%s", -- 다른 계정이면 u/1 등으로 바꿉니다.
+  },
+}
+```
+
 ## 개발
 
 ```sh

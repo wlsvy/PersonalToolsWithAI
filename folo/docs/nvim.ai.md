@@ -13,6 +13,7 @@ folo/
     plugin/folo.lua      user commands only, lazy-require
     lua/folo/init.lua    setup(opts), config merge
     lua/folo/cli.lua     only module that knows CLI args and the JSON envelope
+    lua/folo/gmail.lua   gws client for the dashboard Mail section, see gmail.ai.md
     lua/folo/ui.lua      list + preview windows, selection, keymaps
     lua/folo/article.lua fetches article pages (curl, headless browser), see preview.ai.md
     lua/folo/ai.lua      summary/translation queue and files, see ai.ai.md
@@ -22,7 +23,7 @@ folo/
     tests/cli_test.lua   headless CLI-layer self-check using tests/fake_folo.sh
     tests/article_test.lua  article fetching and UI self-check
     tests/dashboard_test.lua  dashboard tab self-check, see dashboard.ai.md
-    tests/fake_folo.sh, fake_curl.sh, fake_browser.sh  fixtures
+    tests/fake_folo.sh, fake_gws.sh, fake_curl.sh, fake_browser.sh  fixtures
 ```
 
 ## Upstream contract (read from folocli 0.0.5 source and client-sdk 0.3.95 types; not yet run with a real account)
@@ -46,6 +47,7 @@ folo/
   timeout_ms = 30000,
   render = "auto",         -- "auto" | "pandoc" | "strip"
   -- list_width, preview_debounce_ms, open_confirm_over, article, keymaps: see preview.ai.md
+  -- gmail: see gmail.ai.md
 }
 ```
 
