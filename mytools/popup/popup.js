@@ -1,11 +1,11 @@
 import { toggleGrayscale } from '../features/grayscale/grayscale.js';
 import { listTabs } from '../features/tab-list/tab-list.js';
-import { clipMarkdown } from '../features/clip-markdown/clip-markdown.js';
+import { clipMarkdown, appendMarkdown } from '../features/clip-markdown/clip-markdown.js';
 import { openSummary, openSummaryPanel } from '../features/summarize/summarize.js';
 
 const status = document.getElementById('status');
 
-document.getElementById('clip').addEventListener('click', async () => {
+async function clip(append) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let md;
   try {
@@ -19,9 +19,17 @@ document.getElementById('clip').addEventListener('click', async () => {
     return;
   }
   // popup이 포커스를 가진 쪽이라 페이지가 아니라 여기서 쓴다
+  if (append) {
+    const all = appendMarkdown(await navigator.clipboard.readText(), md);
+    await navigator.clipboard.writeText(all);
+    status.textContent = `이어 붙였습니다 (+${md.length}자, 총 ${all.length}자).`;
+    return;
+  }
   await navigator.clipboard.writeText(md);
   status.textContent = `복사했습니다 (${md.length}자).`;
-});
+}
+document.getElementById('clip').addEventListener('click', () => clip(false));
+document.getElementById('clip-append').addEventListener('click', () => clip(true));
 
 // sidePanel.open()은 사용자 제스처 안에서만 되므로 클릭 뒤에는 await하지 않는다. 그래서 활성 탭을 미리 구해 둔다.
 const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });

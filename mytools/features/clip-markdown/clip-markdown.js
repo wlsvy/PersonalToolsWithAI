@@ -12,3 +12,6 @@ export async function clipMarkdown(tabId) {
   const results = await chrome.scripting.executeScript({ target, func: () => extractMarkdown() });
   return results.map((r) => r.result ?? '').reduce((a, b) => (b.length > a.length ? b : a), '');
 }
+
+// 이어 붙이기: 기존 클립보드 내용이 있으면 구분선 뒤에 붙인다
+export const appendMarkdown = (prev, md) => (prev.trim() ? `${prev.trimEnd()}\n\n---\n\n${md}` : md);

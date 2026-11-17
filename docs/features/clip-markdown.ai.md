@@ -6,13 +6,13 @@
 
 | 파일 | 역할 |
 |---|---|
-| `mytools/features/clip-markdown/clip-markdown.js` | `export async function clipMarkdown(tabId)` → Markdown 문자열, 못 찾으면 `''` |
+| `mytools/features/clip-markdown/clip-markdown.js` | `export async function clipMarkdown(tabId)` → Markdown 문자열, 못 찾으면 `''`. `appendMarkdown(prev, md)` → 이어 붙이기 결과 문자열입니다 |
 | `mytools/features/clip-markdown/extract.js` | 페이지에 주입되는 `extractMarkdown()` |
 | `mytools/features/clip-markdown/vendor/Readability.js` | Mozilla Readability (본문 판별) |
 | `mytools/features/clip-markdown/vendor/turndown.js` | HTML → Markdown |
-| `mytools/popup/popup.js` | `#clip` 버튼 → `navigator.clipboard.writeText` |
-| `mytools/background.js` | `MENUS.clip` → `copyText()` (offscreen 경유) |
-| `mytools/offscreen/offscreen.{html,js}` | `{ type: 'copy', text }` 메시지 → `execCommand('copy')` |
+| `mytools/popup/popup.js` | `#clip` / `#clip-append` 버튼 → `clip(append)` → `navigator.clipboard.readText/writeText` |
+| `mytools/background.js` | `MENUS.clip` / `MENUS['clip-append']` → `copyText(text, { append })` (offscreen 경유) |
+| `mytools/offscreen/offscreen.{html,js}` | `{ type: 'copy', text }` → `execCommand('copy')`, `{ type: 'paste' }` → `execCommand('paste')` 결과 반환 |
 
 ## 추출 흐름
 
@@ -34,6 +34,8 @@
 - 우클릭(background): service worker에는 `navigator.clipboard`가 없다 → `chrome.offscreen.createDocument({ reasons: ['CLIPBOARD'] })` → `sendMessage({ type: 'copy' })` → `finally`에서 `closeDocument()`.
   - offscreen 문서는 포커스가 없어 `navigator.clipboard` 대신 textarea + `execCommand('copy')`.
   - 빈 결과면 복사하지 않음 (기존 클립보드 보존). 주입 실패는 알릴 UI가 없어 `.catch(() => {})`.
+- 이어 붙이기: 기존 클립보드를 읽어 `appendMarkdown(prev, md)`로 합친 뒤 씁니다. `prev`가 공백뿐이면 `md`만, 아니면 `prev.trimEnd() + '\n\n---\n\n' + md`입니다.
+  - popup은 `navigator.clipboard.readText()`, background는 같은 offscreen 세션 안에서 `{ type: 'paste' }`로 먼저 읽습니다. 둘 다 manifest의 `clipboardRead` 권한이 필요합니다.
 
 ## 주의
 

@@ -1,5 +1,5 @@
 import { toggleGrayscale } from './features/grayscale/grayscale.js';
-import { clipMarkdown } from './features/clip-markdown/clip-markdown.js';
+import { clipMarkdown, appendMarkdown } from './features/clip-markdown/clip-markdown.js';
 import { openSummary, openSummaryPanel, fillSummary } from './features/summarize/summarize.js';
 
 // 우클릭 메뉴 id → 제목, 실행 함수
@@ -11,6 +11,13 @@ const MENUS = {
       const md = await clipMarkdown(tab.id);
       // 본문을 못 찾았으면 기존 클립보드를 비우지 않는다
       if (md) await copyText(md);
+    },
+  },
+  'clip-append': {
+    title: '본문 Markdown 이어 붙이기',
+    run: async (tab) => {
+      const md = await clipMarkdown(tab.id);
+      if (md) await copyText(md, { append: true });
     },
   },
   summary: { title: '요약·번역 (새 탭)', run: (tab) => openSummary(tab) },
@@ -64,13 +71,14 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 // service worker에는 navigator.clipboard가 없어 offscreen 문서에서 쓴다
-async function copyText(text) {
+async function copyText(text, { append = false } = {}) {
   await chrome.offscreen.createDocument({
     url: 'offscreen/offscreen.html',
     reasons: ['CLIPBOARD'],
-    justification: '추출한 본문을 클립보드에 쓰기',
+    justification: '추출한 본문을 클립보드에 쓰기(이어 붙일 때는 기존 내용 읽기)',
   });
   try {
+    if (append) text = appendMarkdown(await chrome.runtime.sendMessage({ type: 'paste' }), text);
     await chrome.runtime.sendMessage({ type: 'copy', text });
   } finally {
     await chrome.offscreen.closeDocument();
