@@ -2,7 +2,9 @@
 // content script는 storage.session에 접근할 수 없어 메시지로 넘긴다.
 // 페이지가 navigator.clipboard.writeText로 직접 쓰는 복사 버튼(GitHub 등)은 이벤트가 없어 잡지 못한다.
 for (const type of ['copy', 'cut']) {
-  document.addEventListener(type, () => {
+  document.addEventListener(type, (e) => {
+    // 페이지가 dispatchEvent로 꾸민 가짜 이벤트는 클립보드를 바꾸지 않으므로 기록하지 않는다
+    if (!e.isTrusted) return;
     const text = copiedText(document.activeElement);
     // 확장을 새로고침한 뒤 남아 있던 탭에서는 실패하므로 무시한다
     if (text) chrome.runtime.sendMessage({ type: 'clip-history', text }).catch(() => {});
