@@ -1,5 +1,5 @@
 import { toggleGrayscale } from '../features/grayscale/grayscale.js';
-import { listTabs, urlList, markdownList } from '../features/tab-list/tab-list.js';
+import { listTabs } from '../features/tab-list/tab-list.js';
 import { clipMarkdown, appendMarkdown } from '../features/clip-markdown/clip-markdown.js';
 import { openSummary, openSummaryPanel } from '../features/summarize/summarize.js';
 import { recentClips, rememberClip } from '../features/clip-history/clip-history.js';
@@ -97,37 +97,9 @@ await renderHistory();
 
 // 페이지 제목/URL은 외부 데이터라 textContent로만 넣는다
 const list = document.getElementById('tabs');
-const allBox = document.getElementById('tab-all');
-const copyButtons = [document.getElementById('copy-md'), document.getElementById('copy-urls')];
-const rows = []; // { tab, box }
-const picked = () => rows.filter((r) => r.box.checked).map((r) => r.tab);
-function updateSelection() {
-  const n = picked().length;
-  document.getElementById('tab-count').textContent = `${n}/${rows.length}`;
-  allBox.checked = n === rows.length;
-  allBox.indeterminate = n > 0 && n < rows.length;
-  for (const b of copyButtons) b.disabled = n === 0;
-}
-allBox.addEventListener('change', () => {
-  for (const r of rows) r.box.checked = allBox.checked;
-  updateSelection();
-});
-async function copyTabs(format) {
-  const tabs = picked();
-  const text = format(tabs);
-  await navigator.clipboard.writeText(text);
-  await rememberClip(text);
-  renderHistory();
-  status.textContent = `탭 ${tabs.length}개를 복사했습니다.`;
-}
-copyButtons[0].addEventListener('click', () => copyTabs(markdownList));
-copyButtons[1].addEventListener('click', () => copyTabs(urlList));
-
 for (const tab of await listTabs()) {
   const li = document.createElement('li');
-  const text = document.createElement('label');
-  const box = document.createElement('input');
-  const info = document.createElement('div');
+  const text = document.createElement('div');
   const t = document.createElement('div');
   const u = document.createElement('div');
   const btn = document.createElement('button');
@@ -152,14 +124,7 @@ for (const tab of await listTabs()) {
       status.textContent = e.message === '본문을 찾지 못했습니다.' ? e.message : '이 탭에서는 사용할 수 없습니다. 탭을 한 번 열어 로드한 뒤 다시 시도하세요.';
     }
   });
-  // 브라우저에서 Ctrl/Shift+클릭으로 여러 탭을 골라 두었으면 그 탭들을 미리 체크한다
-  box.type = 'checkbox';
-  box.checked = tab.highlighted;
-  box.addEventListener('change', updateSelection);
-  rows.push({ tab, box });
-  info.append(t, u);
-  text.append(box, info);
+  text.append(t, u);
   li.append(text, btn);
   list.append(li);
 }
-updateSelection();
