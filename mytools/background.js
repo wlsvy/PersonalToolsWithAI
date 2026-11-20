@@ -21,6 +21,18 @@ const MENUS = {
       if (md) await copyText(md, { append: true });
     },
   },
+  'copy-tab-urls': {
+    title: '선택한 탭 URL 복사',
+    // 'all'에는 탭 표시줄 메뉴('tab')가 포함되지 않는다
+    contexts: ['all', 'tab'],
+    run: async (tab) => {
+      // Cmd/Shift+클릭으로 고른 탭들. 선택 밖의 탭을 우클릭했으면 그 탭만 복사한다
+      const tabs = tab?.highlighted === false
+        ? [tab]
+        : await chrome.tabs.query({ highlighted: true, windowId: tab?.windowId ?? chrome.windows.WINDOW_ID_CURRENT });
+      await copyText(tabs.map((t) => t.url).join('\n'));
+    },
+  },
   summary: { title: '요약·번역 (새 탭)', run: (tab) => openSummary(tab) },
   'summary-panel': {
     title: '요약·번역 (사이드 패널)',
@@ -34,8 +46,8 @@ const MENUS = {
 
 chrome.runtime.onInstalled.addListener(async () => {
   const keys = await shortcuts();
-  for (const [id, { title }] of Object.entries(MENUS)) {
-    chrome.contextMenus.create({ id, title: withKey(title, keys[id]), contexts: ['all'] });
+  for (const [id, { title, contexts = ['all'] }] of Object.entries(MENUS)) {
+    chrome.contextMenus.create({ id, title: withKey(title, keys[id]), contexts });
   }
 });
 
@@ -55,9 +67,9 @@ async function shortcuts() {
 
 const withKey = (title, key) => (key ? `${title}  [${key}]` : title);
 
-// chrome:// 등 주입 불가 페이지에서는 실패하는데, 알릴 UI가 없어 무시한다
+// chrome:// 등 주입 불가 페이지에서는 실패하는데, 알릴 UI가 없어 service worker 콘솔에만 남긴다
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  MENUS[info.menuItemId]?.run(tab).catch(() => {});
+  MENUS[info.menuItemId]?.run(tab).catch((e) => console.error(info.menuItemId, e));
 });
 
 // 단축키(manifest commands) → 같은 id의 메뉴 기능 실행

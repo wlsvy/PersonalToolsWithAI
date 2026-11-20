@@ -22,6 +22,9 @@
     "summary-panel": {
       "suggested_key": { "default": "Alt+Shift+J" },
       "description": "요약·번역 (사이드 패널)"
+    },
+    "copy-tab-urls": {
+      "description": "선택한 탭 URL 복사"
     }
   },
   "action": {
